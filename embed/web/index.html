@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>SpaceMolt Commander</title>
+    <title>SM-LT</title>
     <link rel="stylesheet" href="/index.css" />
   </head>
   <body>
@@ -21,7 +21,7 @@
     </div>
     <header>
       <div style="display: flex; align-items: center">
-        <h1 id="appTitle">SpaceMolt Commander</h1>
+        <h1 id="appTitle">SM-LT</h1>
         <div class="top-tabs" id="topTabs">
           <div
             class="top-tab active"
@@ -14105,10 +14105,10 @@
     <div class="setting-row">
       <div>
         <div class="setting-label">Browser Tab Title</div>
-        <div class="setting-hint">Plain-text title shown in the browser tab. Browser tabs can't be colored, so no color codes here. Leave blank to use the default "SpaceMolt Commander". Useful for telling multiple client tabs apart.</div>
+        <div class="setting-hint">Plain-text title shown in the browser tab. Browser tabs can't be colored, so no color codes here. Leave blank to use the default "SM-LT". Useful for telling multiple client tabs apart.</div>
       </div>
       <div style="display:flex;align-items:center;gap:8px">
-        <input type="text" id="set-general-windowTitle" maxlength="120" value="${esc(general.windowTitle || "")}" placeholder="SpaceMolt Commander" style="width:320px" />
+        <input type="text" id="set-general-windowTitle" maxlength="120" value="${esc(general.windowTitle || "")}" placeholder="SM-LT" style="width:320px" />
         <button class="sm" onclick="document.getElementById('set-general-windowTitle').value='';saveGeneralSettings();applyWindowTitle()">Reset</button>
       </div>
     </div>
@@ -14116,14 +14116,14 @@
     <div class="setting-row">
       <div>
         <div class="setting-label">App Header Title</div>
-        <div class="setting-hint">Title shown in the in-app header (the big heading). Supports color codes and can be longer than the tab title. Leave blank to use "SpaceMolt Commander".</div>
+        <div class="setting-hint">Title shown in the in-app header (the big heading). Supports color codes and can be longer than the tab title. Leave blank to use "SM-LT".</div>
         <div class="setting-hint" style="margin-top:4px">
           Color codes: <code>[c:red]text[/c]</code> (names: red, green, blue, yellow, cyan, magenta, orange, purple, pink, lime, teal, gold, white, gray) or hex <code>[c:#ff8800]text[/c]</code>. Nested colors work too.
         </div>
       </div>
       <div style="display:flex;flex-direction:column;align-items:flex-start;gap:8px">
         <div style="display:flex;align-items:center;gap:8px">
-          <input type="text" id="set-general-headerTitle" maxlength="200" value="${esc(general.headerTitle || "")}" placeholder="SpaceMolt Commander" style="width:320px" oninput="updateHeaderTitlePreview()" />
+          <input type="text" id="set-general-headerTitle" maxlength="200" value="${esc(general.headerTitle || "")}" placeholder="SM-LT" style="width:320px" oninput="updateHeaderTitlePreview()" />
           <button class="sm" onclick="document.getElementById('set-general-headerTitle').value='';saveGeneralSettings();applyWindowTitle();updateHeaderTitlePreview()">Reset</button>
         </div>
         <div style="font-size:13px;font-weight:600" id="headerTitlePreview"></div>
@@ -14697,12 +14697,12 @@
         const lowSpaceSuffix = diskSpaceLow ? " [LOW SPACE!]" : "";
         // Browser tab title is plain text only (no color codes allowed).
         document.title = stripColorCodes(
-          (tabTitle.trim() ? tabTitle.trim() : "SpaceMolt Commander") + lowSpaceSuffix,
+          (tabTitle.trim() ? tabTitle.trim() : "SM-LT") + lowSpaceSuffix,
         );
         // In-app header renders colors and can be a different/longer title.
         const h1 = document.getElementById("appTitle");
         if (h1) {
-          const baseHeader = headerTitle.trim() ? headerTitle.trim() : "SpaceMolt Commander";
+          const baseHeader = headerTitle.trim() ? headerTitle.trim() : "SM-LT";
           h1.innerHTML = diskSpaceLow
             ? parseColorCodes("[c:red]" + baseHeader + " — LOW SPACE![/c]")
             : parseColorCodes(baseHeader);
@@ -14716,7 +14716,7 @@
         const val =
           document.getElementById("set-general-headerTitle").value || "";
         el.innerHTML = parseColorCodes(
-          val.trim() ? val.trim() : "SpaceMolt Commander",
+          val.trim() ? val.trim() : "SM-LT",
         );
       }
 
