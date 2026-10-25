@@ -1,0 +1,17 @@
+{
+  "lockfileVersion": 1,
+  "configVersion": 1,
+  "workspaces": {
+    "": {
+      "name": "spacemolt-bridge",
+      "dependencies": {
+        "@spacemolt/lib": "^4.6.0",
+      },
+    },
+  },
+  "packages": {
+    "@spacemolt/lib": ["@spacemolt/lib@4.6.0", "", { "peerDependencies": { "typescript": "^5" } }, "sha512-O6mGCiaMzcYkRB2+imBRH6187pBE5CU9cNLPOeDk9etQJrSjLhZNSSJ0tgKlEJUvbs4Ur0D63UGW8kX+MqUAwQ=="],
+
+    "typescript": ["typescript@5.9.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw=="],
+  }
+}

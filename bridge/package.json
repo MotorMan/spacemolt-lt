@@ -1,0 +1,11 @@
+{
+  "name": "spacemolt-bridge",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "bun run index.ts"
+  },
+  "dependencies": {
+    "@spacemolt/lib": "^4.6.0"
+  }
+}

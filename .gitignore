@@ -1,0 +1,30 @@
+# Binaries
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Go
+vendor/
+*.test
+
+# Node / bridge
+bridge/node_modules/
+bridge/bun.lockb
+
+# Data and runtime
+data/
+sessions/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build output
+dist/

@@ -1,0 +1,13 @@
+[Unit]
+Description=SpaceMolt Bot Runner
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/spacemolt
+ExecStart=/opt/spacemolt/spacemolt-lt
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
