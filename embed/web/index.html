@@ -2293,6 +2293,7 @@
               .catch(() => ({})),
           ]);
           settings = settingsRes || {};
+          console.log("API settings loaded:", settingsRes ? Object.keys(settingsRes) : "null");
           applyWindowTitle();
           flockSettings = flockRes || { flockGroups: [], assignments: {} };
           lastUsedRoutines = lastUsedRoutinesRes || {};

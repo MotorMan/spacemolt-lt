@@ -474,6 +474,7 @@ func (s *Server) handleSettings(w http.ResponseWriter, r *http.Request) {
 	var settings map[string]interface{}
 	if s.Settings != nil {
 		_ = s.Settings.Read(&settings)
+		log.Printf("handleSettings: read=%v", settings)
 	}
 	if settings == nil {
 		settings = map[string]interface{}{}
