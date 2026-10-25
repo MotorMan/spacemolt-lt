@@ -50,12 +50,16 @@ echo.
     echo [%date% %time%] Installing bridge dependencies...
     bun install --cwd bridge || echo Warning: bun install failed
     echo.
+    echo [%date% %time%] Killing any existing bun/bridge processes on port 8787...
+    taskkill /F /IM bun.exe >nul 2>&1 || true
+    timeout /t 1 /nobreak >nul
+    echo.
     echo [%date% %time%] Launching %BINARY_NAME%...
     %BINARY_NAME%
     set EXIT_CODE=%ERRORLEVEL%
 
     echo.
-    echo [%date% %time%] spacemolt-lt exited with code %EXIT_CODE%
+    echo [%date% %time%] spacemolt-lt exited with code %EXIT_CODE% (raw ERRORLEVEL)
     
     if %EXIT_CODE% EQU 0 (
         echo === Normal shutdown - no restart ===

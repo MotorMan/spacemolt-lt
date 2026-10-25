@@ -56,13 +56,18 @@ while true; do
     bun install --cwd bridge || echo "Warning: bun install failed"
     echo ""
 
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] Killing any existing bun/bridge processes on port 8787..."
+    pkill -f bun 2>/dev/null || true
+    sleep 1
+    echo ""
+
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] Launching $BINARY_NAME..."
     ./"$BINARY_NAME"
     EXIT_CODE=$?
     set -e
 
     echo ""
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] spacemolt-lt exited with code $EXIT_CODE"
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] spacemolt-lt exited with code $EXIT_CODE (raw exit code)"
 
     if [ "$EXIT_CODE" -eq 0 ]; then
         echo ""
