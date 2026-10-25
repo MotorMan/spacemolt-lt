@@ -143,7 +143,7 @@ func main() {
 		}
 	}
 
-	ws := web.New(mgr, client, settingsStore, syncClient)
+	ws := web.New(mgr, client, settingsStore, syncClient, cancel)
 	ws.RegisterRoutes()
 
 	addr := ":3000"

@@ -6,6 +6,7 @@ import (
 	"io/fs"
 	"net/http"
 	_ "net/http/pprof"
+	"os"
 	"runtime"
 	"sync"
 	"time"
@@ -33,10 +34,22 @@ type Server struct {
 	Sync     *ssync.Client
 	Hub      *Hub
 	up       websocket.Upgrader
+
+	cancel    context.CancelFunc
+	shutdownCh chan struct{}
 }
 
-func New(m *botmanager.Manager, bc *bridge.Client, settings *store.FileStore, sc *ssync.Client) *Server {
-	return &Server{Manager: m, Bridge: bc, Settings: settings, Sync: sc, Hub: NewHub(), up: websocket.Upgrader{CheckOrigin: func(r *http.Request) bool { return true }}}
+func New(m *botmanager.Manager, bc *bridge.Client, settings *store.FileStore, sc *ssync.Client, cancel context.CancelFunc) *Server {
+	return &Server{
+		Manager:     m,
+		Bridge:      bc,
+		Settings:    settings,
+		Sync:        sc,
+		Hub:         NewHub(),
+		up:          websocket.Upgrader{CheckOrigin: func(r *http.Request) bool { return true }},
+		cancel:      cancel,
+		shutdownCh:  make(chan struct{}, 1),
+	}
 }
 
 func (s *Server) RegisterRoutes() {
@@ -52,6 +65,8 @@ func (s *Server) RegisterRoutes() {
 	http.HandleFunc("/api/client-sync/catalog-state", s.handleSyncCatalogState)
 	http.HandleFunc("/api/client-sync/market-query", s.handleSyncMarketQuery)
 	http.HandleFunc("/api/client-sync/bot-status", s.handleSyncBotStatus)
+	// Shutdown / restart endpoint
+	http.HandleFunc("/api/shutdown", s.handleShutdown)
 	// Metrics endpoint
 	http.HandleFunc("/metrics", s.handleMetrics)
 	// Static assets served from embedded web directory at root
@@ -309,5 +324,22 @@ func (s *Server) handleMetrics(w http.ResponseWriter, r *http.Request) {
 		"bots":           len(s.Manager.ListBots()),
 		"cpuCores":       runtime.NumCPU(),
 	})
+}
+
+func (s *Server) handleShutdown(w http.ResponseWriter, r *http.Request) {
+	restart := r.URL.Query().Get("restart") == "true"
+	// Respond immediately so the frontend gets a success.
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{"ok": true})
+
+	// Shutdown on a goroutine so the HTTP response is sent first.
+	go func() {
+		time.Sleep(500 * time.Millisecond)
+		if restart {
+			os.Exit(101) // watchdog restarts on 101
+		} else {
+			os.Exit(0)   // watchdog stops on 0
+		}
+	}()
 }
 
