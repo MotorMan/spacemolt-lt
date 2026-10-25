@@ -241,6 +241,16 @@ func (s *Server) dispatch(action wsMessage) map[string]interface{} {
 				log.Printf("saveSettings: write error: %v", err)
 				return map[string]interface{}{"ok": false, "error": err.Error()}
 			}
+			// Broadcast updated settings to all connected clients so UI tabs refresh.
+			updated := map[string]interface{}{}
+			_ = s.Settings.Read(&updated)
+			if updated == nil {
+				updated = map[string]interface{}{}
+			}
+			s.Broadcast(map[string]interface{}{
+				"type":   "settings_updated",
+				"settings": updated,
+			})
 		}
 		return map[string]interface{}{"ok": true}
 	case "setClerkKey":
