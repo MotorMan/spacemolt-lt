@@ -162,7 +162,22 @@ func (s *Server) dispatch(action wsMessage) map[string]interface{} {
 		return map[string]interface{}{"ok": true, "data": json.RawMessage(res)}
 	case "saveSettings":
 		if s.Settings != nil {
-			_ = s.Settings.Write(action.Data)
+			var cur map[string]interface{}
+			_ = s.Settings.Read(&cur)
+			if cur == nil {
+				cur = map[string]interface{}{}
+			}
+			routine, _ := action.Data["routine"].(string)
+			if routine != "" {
+				if s, ok := action.Data["settings"].(map[string]interface{}); ok {
+					cur[routine] = s
+				}
+			} else {
+				for k, v := range action.Data {
+					cur[k] = v
+				}
+			}
+			_ = s.Settings.Write(cur)
 		}
 		return map[string]interface{}{"ok": true}
 	case "setClerkKey":
