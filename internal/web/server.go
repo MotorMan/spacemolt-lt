@@ -169,6 +169,28 @@ func (s *Server) dispatch(action wsMessage) map[string]interface{} {
 	switch action.Type {
 	case "ping":
 		return map[string]interface{}{"ok": true, "pong": true}
+	case "init":
+		var settings map[string]interface{}
+		if s.Settings != nil {
+			_ = s.Settings.Read(&settings)
+		}
+		if settings == nil {
+			settings = map[string]interface{}{}
+		}
+		bots := make([]string, 0, len(s.Manager.ListBots()))
+		for _, b := range s.Manager.ListBots() {
+			bots = append(bots, b.ID)
+		}
+		routineNames := make([]string, 0, len(routines.Registry))
+		for name := range routines.Registry {
+			routineNames = append(routineNames, name)
+		}
+		return map[string]interface{}{
+			"ok":       true,
+			"settings": settings,
+			"bots":     bots,
+			"routines": routineNames,
+		}
 	case "listBots":
 		ids := []string{}
 		for _, b := range s.Manager.ListBots() {
