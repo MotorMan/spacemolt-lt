@@ -169,13 +169,7 @@ func (s *Server) dispatch(action wsMessage) map[string]interface{} {
 			}
 			routine, _ := action.Data["routine"].(string)
 			if routine != "" {
-				if s, ok := action.Data["settings"].(map[string]interface{}); ok {
-					cur[routine] = s
-				}
-			} else {
-				for k, v := range action.Data {
-					cur[k] = v
-				}
+				cur[routine] = action.Data["settings"]
 			}
 			_ = s.Settings.Write(cur)
 		}
