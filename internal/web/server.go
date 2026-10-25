@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"io/fs"
+	"log"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
@@ -205,9 +206,19 @@ func (s *Server) dispatch(action wsMessage) map[string]interface{} {
 			}
 			routine, _ := action.Data["routine"].(string)
 			if routine != "" {
-				cur[routine] = action.Data["settings"]
+				settings := action.Data["settings"]
+				if settings == nil {
+					settings = map[string]interface{}{}
+				}
+				cur[routine] = settings
+				log.Printf("saveSettings: routine=%s settings=%v", routine, settings)
+			} else {
+				log.Printf("saveSettings: empty routine, data=%v", action.Data)
 			}
-			_ = s.Settings.Write(cur)
+			if err := s.Settings.Write(cur); err != nil {
+				log.Printf("saveSettings: write error: %v", err)
+				return map[string]interface{}{"ok": false, "error": err.Error()}
+			}
 		}
 		return map[string]interface{}{"ok": true}
 	case "setClerkKey":
