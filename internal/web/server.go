@@ -41,7 +41,6 @@ func New(m *botmanager.Manager, bc *bridge.Client, settings *store.FileStore, sc
 
 func (s *Server) RegisterRoutes() {
 	http.HandleFunc("/ws", s.handleWS)
-	http.HandleFunc("/", s.handleIndex)
 	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(map[string]interface{}{"ok": true, "bots": len(s.Manager.ListBots())})
@@ -55,19 +54,11 @@ func (s *Server) RegisterRoutes() {
 	http.HandleFunc("/api/client-sync/bot-status", s.handleSyncBotStatus)
 	// Metrics endpoint
 	http.HandleFunc("/metrics", s.handleMetrics)
-	// pprof auto-registered on DefaultServeMux via blank import
+	// Static assets served from embedded web directory at root
 	sub, _ := fs.Sub(embed.FS, "web")
 	http.Handle("/assets/", http.StripPrefix("/assets/", http.FileServer(http.FS(sub))))
-}
-
-func (s *Server) handleIndex(w http.ResponseWriter, r *http.Request) {
-	data, err := embed.FS.ReadFile("web/index.html")
-	if err != nil {
-		http.Error(w, "not found", 404)
-		return
-	}
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	_, _ = w.Write(data)
+	http.Handle("/", http.FileServer(http.FS(sub)))
+	// pprof auto-registered on DefaultServeMux via blank import
 }
 
 type wsMessage struct {
