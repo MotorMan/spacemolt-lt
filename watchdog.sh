@@ -52,6 +52,10 @@ while true; do
     git pull || echo "Warning: git pull failed or not a git repository"
     echo ""
 
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] Installing bridge dependencies..."
+    bun install --cwd bridge || echo "Warning: bun install failed"
+    echo ""
+
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] Launching $BINARY_NAME..."
     ./"$BINARY_NAME"
     EXIT_CODE=$?

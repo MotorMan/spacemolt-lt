@@ -47,6 +47,9 @@ echo.
     echo [%date% %time%] Running git pull...
     git pull || echo Warning: git pull failed or not a git repository
     echo.
+    echo [%date% %time%] Installing bridge dependencies...
+    bun install --cwd bridge || echo Warning: bun install failed
+    echo.
     echo [%date% %time%] Launching %BINARY_NAME%...
     %BINARY_NAME%
     set EXIT_CODE=%ERRORLEVEL%
