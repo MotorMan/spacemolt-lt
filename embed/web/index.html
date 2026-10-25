@@ -2690,7 +2690,8 @@
               }
               break;
              case "settings_updated":
-              const prevSystemBlacklist = settings.system_blacklist;
+               console.log("settings_updated received:", msg.settings ? "yes" : "no", Object.keys(msg.settings || {}).length);
+               const prevSystemBlacklist = settings.system_blacklist;
               const prevStationBlacklist = settings.station_blacklist;
               const prevFcSellItems = settings.fuel_cell_seller?.sellItems;
               const prevFcLoadouts = settings.fuel_cell_seller?.blockedStationLoadouts;
