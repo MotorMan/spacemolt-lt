@@ -133,6 +133,7 @@ func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				return
 			}
+			log.Printf("WS raw: %s", string(msg))
 			// Frontend sends everything at top level (type + routine + settings + etc.),
 			// not wrapped in a "data" field. Capture all non-type fields into Data.
 			var raw map[string]interface{}
