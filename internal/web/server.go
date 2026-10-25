@@ -133,8 +133,18 @@ func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				return
 			}
-			var action wsMessage
-			_ = json.Unmarshal(msg, &action)
+			// Frontend sends everything at top level (type + routine + settings + etc.),
+			// not wrapped in a "data" field. Capture all non-type fields into Data.
+			var raw map[string]interface{}
+			_ = json.Unmarshal(msg, &raw)
+			actionType, _ := raw["type"].(string)
+			data := map[string]interface{}{}
+			for k, v := range raw {
+				if k != "type" {
+					data[k] = v
+				}
+			}
+			action := wsMessage{Type: actionType, Data: data}
 			resp := s.dispatch(action)
 			b, _ := json.Marshal(resp)
 			write(websocket.TextMessage, b)
@@ -205,24 +215,27 @@ func (s *Server) dispatch(action wsMessage) map[string]interface{} {
 				cur = map[string]interface{}{}
 			}
 			routine, _ := action.Data["routine"].(string)
-			if routine != "" {
-				settings := action.Data["settings"]
-				if settings == nil {
-					settings = map[string]interface{}{}
-				}
+			settings := action.Data["settings"]
+			if routine != "" && settings != nil {
 				cur[routine] = settings
 				log.Printf("saveSettings: routine=%s settings=%v", routine, settings)
-		} else if routine == "" {
-			log.Printf("saveSettings: empty routine, data=%v", action.Data)
-			// No routine specified — save top-level keys directly into cur
-			for k, v := range action.Data {
-				if k == "type" || k == "routine" {
-					continue
+			} else if routine == "" {
+				log.Printf("saveSettings: empty routine, data=%v", action.Data)
+				// No routine specified — save top-level keys directly into cur
+				hasKeys := false
+				for k, v := range action.Data {
+					if k == "type" || k == "routine" {
+						continue
+					}
+					cur[k] = v
+					hasKeys = true
 				}
-				cur[k] = v
+				if !hasKeys {
+					log.Printf("saveSettings: no data to save, skipping write")
+					return map[string]interface{}{"ok": true}
+				}
+				log.Printf("saveSettings: saved top-level keys: %v", cur)
 			}
-			log.Printf("saveSettings: saved top-level keys: %v", cur)
-		}
 			if err := s.Settings.Write(cur); err != nil {
 				log.Printf("saveSettings: write error: %v", err)
 				return map[string]interface{}{"ok": false, "error": err.Error()}
