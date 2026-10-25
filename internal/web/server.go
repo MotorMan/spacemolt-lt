@@ -212,9 +212,17 @@ func (s *Server) dispatch(action wsMessage) map[string]interface{} {
 				}
 				cur[routine] = settings
 				log.Printf("saveSettings: routine=%s settings=%v", routine, settings)
-			} else {
-				log.Printf("saveSettings: empty routine, data=%v", action.Data)
+		} else if routine == "" {
+			log.Printf("saveSettings: empty routine, data=%v", action.Data)
+			// No routine specified — save top-level keys directly into cur
+			for k, v := range action.Data {
+				if k == "type" || k == "routine" {
+					continue
+				}
+				cur[k] = v
 			}
+			log.Printf("saveSettings: saved top-level keys: %v", cur)
+		}
 			if err := s.Settings.Write(cur); err != nil {
 				log.Printf("saveSettings: write error: %v", err)
 				return map[string]interface{}{"ok": false, "error": err.Error()}

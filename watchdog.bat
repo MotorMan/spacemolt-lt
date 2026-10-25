@@ -51,7 +51,7 @@ echo.
     bun install --cwd bridge || echo Warning: bun install failed
     echo.
     echo [%date% %time%] Killing any existing bun/bridge processes on port 8787...
-    taskkill /F /IM bun.exe >nul 2>&1 || true
+    taskkill /F /IM bun.exe >nul 2>&1
     timeout /t 1 /nobreak >nul
     echo.
     echo [%date% %time%] Launching %BINARY_NAME%...
