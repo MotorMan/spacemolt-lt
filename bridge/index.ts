@@ -1,4 +1,4 @@
-import { initSpacemoltClients, listOwnedPlayers, listOwnedPlayersByKey, getConnectedAccount, removeConnectedAccount } from "../../spacemolt_botrunner/src/libClient.ts";
+import { initSpacemoltClients, listOwnedPlayers, listOwnedPlayersByKey, getConnectedAccount, removeConnectedAccount } from "./libClient.ts";
 import { SpacemoltClient } from "@spacemolt/lib";
 
 const PORT = Number(process.env.PORT || 8787);
@@ -42,7 +42,7 @@ const server = Bun.serve({
             const { filter, botIds } = req.params || {};
             const clients = (globalThis as any).__clients ?? [];
             // use libClient connectOwnedAccounts
-            const { connectOwnedAccounts } = await import("../../spacemolt_botrunner/src/libClient.ts");
+            const { connectOwnedAccounts } = await import("./libClient.ts");
             const accounts = await connectOwnedAccounts(
               (p: any) => (botIds ? botIds.includes(p.username || p.id) : true) && (filter ? filter(p) : true),
               (account: any) => {
