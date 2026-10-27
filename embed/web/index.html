@@ -2496,7 +2496,6 @@
           wsLastMsg = Date.now();
           switch (msg.type) {
             case "init":
-              console.log("INIT received, settings keys:", Object.keys(msg.settings || {}));
               clearTimeout(wsInitTimer);
               bots = msg.bots || [];
               routines = msg.routines || [];
@@ -13989,7 +13988,6 @@
       }
 
       function renderSettingsPanel() {
-        console.log("renderSettingsPanel called, activeTab:", activeSettingsTab, "settings keys:", Object.keys(settings || {}));
         const panel = document.getElementById("settingsContent");
         if (!panel) return;
         const dispatch = {

@@ -118,7 +118,7 @@ func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
 	go func() {
 		var settings map[string]interface{}
 		if s.Settings != nil {
-			_ = s.Settings.Read(&settings); log.Printf("init: read=%v", settings)
+			_ = s.Settings.Read(&settings)
 		}
 		if settings == nil {
 			settings = map[string]interface{}{}
