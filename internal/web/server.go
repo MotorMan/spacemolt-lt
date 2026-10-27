@@ -499,6 +499,27 @@ func (s *Server) dispatch(action wsMessage) map[string]interface{} {
 		if len(ids) == 0 {
 			return map[string]interface{}{"ok": true, "data": map[string]interface{}{"added": 0, "ids": []interface{}{}}}
 		}
+		// Initialize bridge clients with clerk API keys from settings so
+		// connectOwned has the Clerk key available (same as listClerkPlayers).
+		if s.Settings != nil {
+			var cur map[string]interface{}
+			_ = s.Settings.Read(&cur)
+			if cur != nil {
+				clerkObj, _ := cur["clerk"].(map[string]interface{})
+				var keys []interface{}
+				if v, ok := clerkObj["apiKey"].(string); ok && v != "" {
+					keys = append(keys, v)
+				}
+				if v, ok := clerkObj["apiKey2"].(string); ok && v != "" {
+					keys = append(keys, v)
+				}
+				if len(keys) > 0 {
+					if _, err := s.Bridge.Call(context.Background(), "initClients", map[string]interface{}{"keys": keys}); err != nil {
+						log.Printf("addClerkBots: initClients error: %v", err)
+					}
+				}
+			}
+		}
 		log.Printf("addClerkBots: connecting %d account(s): %v", len(ids), ids)
 		res, err := s.Bridge.Call(context.Background(), "connectOwned", map[string]interface{}{"ids": ids})
 		if err != nil {
