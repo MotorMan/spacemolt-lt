@@ -98,17 +98,19 @@ func (c *Client) Call(ctx context.Context, method string, params interface{}) (j
 	ch := make(chan *Response, 1)
 	c.pending[id] = ch
 	conn := c.conn
-	c.mu.Unlock()
 
 	req := Request{JSONRPC: "2.0", ID: id, Method: method, Params: params}
 	data, _ := json.Marshal(req)
-	if err := conn.WriteJSON(req); err != nil {
+	err := conn.WriteJSON(req)
+	c.mu.Unlock()
+	_ = data
+
+	if err != nil {
 		c.mu.Lock()
 		delete(c.pending, id)
 		c.mu.Unlock()
 		return nil, err
 	}
-	_ = data
 
 	select {
 	case <-ctx.Done():
