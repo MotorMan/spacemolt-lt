@@ -2656,21 +2656,22 @@
                 window.currentSettings = settings; // Sync for use in render functions
                 updateAiChatToggleButton();
               }
-              if (msg.action === "listClerkPlayers" && msg.data && msg.data.groups) {
-                clerkGroupsData = msg.data.groups;
-                clerkPlayersData = clerkGroupsData.flatMap((g) => g.players);
-                // Re-base the persistent selection from the server's selected
-                // set (the persisted settings.clerk.bots), so a fresh fetch
-                // reflects what's actually saved without losing unsaved state
-                // scopes — an explicit "List Players" is treated as a refresh.
-                clerkSelection = new Set(
-                  clerkPlayersData.filter((p) => p.selected).map((p) => p.username),
-                );
-                renderClerkPlayers();
-                const statusEl = document.getElementById("clerkStatus");
-                if (statusEl) {
-                  const acctCount = clerkGroupsData.length;
-                  statusEl.textContent = `${msg.data.count} player(s) across ${acctCount} account(s). Select the ones to add.`;
+              if (msg.action === "listClerkPlayers") {
+                if (msg.error) {
+                  const statusEl = document.getElementById("clerkStatus");
+                  if (statusEl) statusEl.textContent = "Error: " + msg.error;
+                } else if (msg.data && msg.data.groups) {
+                  clerkGroupsData = msg.data.groups;
+                  clerkPlayersData = clerkGroupsData.flatMap((g) => g.players);
+                  clerkSelection = new Set(
+                    clerkPlayersData.filter((p) => p.selected).map((p) => p.username),
+                  );
+                  renderClerkPlayers();
+                  const statusEl = document.getElementById("clerkStatus");
+                  if (statusEl) {
+                    const acctCount = clerkGroupsData.length;
+                    statusEl.textContent = `${msg.data.count} player(s) across ${acctCount} account(s). Select the ones to add.`;
+                  }
                 }
               } else if (msg.action === "addClerkBots" && msg.data && typeof msg.data.added === "number") {
                 const statusEl = document.getElementById("clerkStatus");

@@ -371,12 +371,15 @@ func (s *Server) dispatch(action wsMessage) map[string]interface{} {
 					}
 				}
 				if len(keys) > 0 {
-					_, _ = s.Bridge.Call(context.Background(), "initClients", map[string]interface{}{"keys": keys})
+					if _, err := s.Bridge.Call(context.Background(), "initClients", map[string]interface{}{"keys": keys}); err != nil {
+						log.Printf("listClerkPlayers: initClients error: %v", err)
+					}
 				}
 			}
 		}
 		res, err := s.Bridge.Call(context.Background(), "listOwnedPlayersByKey", nil)
 		if err != nil {
+			log.Printf("listClerkPlayers: bridge error: %v", err)
 			return map[string]interface{}{"ok": false, "error": err.Error()}
 		}
 		// Parse the bridge result and format for frontend
