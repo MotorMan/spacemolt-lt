@@ -3,6 +3,46 @@ import { SpacemoltClient } from "@spacemolt/lib";
 
 const PORT = Number(process.env.PORT || 8787);
 
+// Send the current account state as an account.status event to the Go client.
+// Reads account.state directly (the cached GameState) so we always ship fresh
+// data — useful both for initial seeding after connect and for onStateChange
+// push updates.
+function sendAccountStatus(ws: any, account: any) {
+  const st = account.state as any;
+  if (!st) {
+    console.log(
+      `[bridge] account.status id=${account.id} username=${account.username} state=MISSING`,
+    );
+    return;
+  }
+  console.log(
+    `[bridge] account.status id=${account.id} username=${account.username} credits=${st.credits} fuel=${st.fuel} hull=${st.hull} system=${st.location?.system_id} poi=${st.location?.poi_id} ship=${st.ship?.name} cargo=${JSON.stringify(st.cargo)}`,
+  );
+  ws.send(
+    JSON.stringify({
+      jsonrpc: "2.0",
+      method: "account.status",
+      params: {
+        id: account.id,
+        username: account.username,
+        credits: st.credits,
+        fuel: st.fuel,
+        maxFuel: st.max_fuel ?? st.maxFuel,
+        hull: st.hull,
+        maxHull: st.max_hull ?? st.maxHull,
+        shield: st.shield,
+        maxShield: st.max_shield ?? st.maxShield,
+        cargo: st.cargo,
+        isCloaked: st.is_cloaked,
+        system: st.location?.system_id,
+        poi: st.location?.poi_id,
+        location: st.location?.id || st.location?.name,
+        ship: st.ship?.name || st.ship?.id,
+      },
+    }),
+  );
+}
+
 type RpcReq = { jsonrpc: string; id?: number; method: string; params?: any };
 
 const server = Bun.serve({
@@ -59,29 +99,11 @@ const server = Bun.serve({
                 });
                 // forward live state changes to Go dashboard
                 account.onStateChange?.((_changed: any[]) => {
-                  const st = account.state as any;
-                  if (!st) return;
-                  ws.send(JSON.stringify({ jsonrpc: "2.0", method: "account.status", params: {
-                    id: account.id,
-                    username: account.username,
-                    credits: st.credits,
-                    fuel: st.fuel,
-                    maxFuel: st.max_fuel ?? st.maxFuel,
-                    hull: st.hull,
-                    maxHull: st.max_hull ?? st.maxHull,
-                    shield: st.shield,
-                    maxShield: st.max_shield ?? st.maxShield,
-                    cargo: st.cargo,
-                    isCloaked: st.is_cloaked,
-                    system: st.location?.system_id,
-                    poi: st.location?.poi_id,
-                    location: st.location?.id || st.location?.name,
-                    ship: st.ship?.name || st.ship?.id,
-                  } }));
+                  sendAccountStatus(ws, account);
                 });
-                // Seed the account's state cache so exec queries return data
-                // immediately instead of waiting for the first state push.
+                // Seed state and send initial status immediately after connect
                 account.refresh().catch(() => {});
+                sendAccountStatus(ws, account);
               },
             );
             console.log(
