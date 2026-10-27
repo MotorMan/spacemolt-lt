@@ -42,10 +42,16 @@ const server = Bun.serve({
             const { filter, botIds, ids } = req.params || {};
             const playerIds = botIds ?? ids;
             const { connectOwnedAccounts } = await import("./libClient.ts");
+            console.log(
+              `[bridge] connectOwned playerIds=${JSON.stringify(playerIds)}`,
+            );
             const accounts = await connectOwnedAccounts(
               (p: any) => (playerIds ? playerIds.includes(p.username || p.id) : true) && (filter ? filter(p) : true),
               (account: any) => {
                 // push connected event
+                console.log(
+                  `[bridge] account.connected id=${account.id} username=${account.username}`,
+                );
                 ws.send(JSON.stringify({ jsonrpc: "2.0", method: "account.connected", params: { id: account.id, username: account.username, account: { id: account.id, username: account.username } } }));
                 // listen disconnect
                 account.onDisconnected?.((err: any) => {
@@ -75,6 +81,9 @@ const server = Bun.serve({
                 });
               },
             );
+            console.log(
+              `[bridge] connectOwned done accounts=${accounts.map((a:any)=>a.id).join(",")}`,
+            );
             reply(accounts.map((a: any) => ({ id: a.id, username: a.username })));
             break;
           }
@@ -86,12 +95,17 @@ const server = Bun.serve({
           }
           case "exec": {
             const acc = getConnectedAccount(req.params?.id);
-            if (!acc) { reply(null, { code: -1, message: "not found" }); break; }
+            console.log(
+              `[bridge] exec id=${req.params?.id} command=${req.params?.command} accFound=${!!acc}`,
+            );
+            if (!acc) {
+              reply(null, { code: -1, message: "account not found" });
+              break;
+            }
             const { command, params } = req.params || {};
             // command like "get_status" or tool/action? Support exec with command string
             let result;
             if (command && typeof acc.send === "function") {
-              // assume command is "tool.action"? fallback: treat as query tool spacemolt
               const parts = String(command).split(".");
               if (parts.length === 2) {
                 result = await acc.send(parts[0], parts[1], params || {});
@@ -99,6 +113,9 @@ const server = Bun.serve({
                 result = await acc.query("spacemolt", command, params || {});
               }
             }
+            console.log(
+              `[bridge] exec id=${req.params?.id} command=${req.params?.command} done`,
+            );
             reply(result);
             break;
           }
