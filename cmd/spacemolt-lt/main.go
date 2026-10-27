@@ -65,12 +65,17 @@ func main() {
 				}
 			case "account.connected":
 				var p struct {
-					ID string `json:"id"`
+					ID       string `json:"id"`
+					Username string `json:"username"`
 				}
 				_ = json.Unmarshal(ev.Params, &p)
 				if p.ID != "" && mgr.GetBotByAccount(p.ID) == nil {
-					log.Printf("account.connected: creating bot for %s", p.ID)
-					b := bot.New(p.ID, p.ID, p.ID, client)
+					username := p.Username
+					if username == "" {
+						username = p.ID
+					}
+					log.Printf("account.connected: creating bot for %s (%s)", p.ID, username)
+					b := bot.New(p.ID, username, p.ID, client)
 					mgr.AddBot(b)
 					mgr.StartBot(ctx, b, 0)
 				}

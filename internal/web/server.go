@@ -465,7 +465,14 @@ func (s *Server) dispatch(action wsMessage) map[string]interface{} {
 						if players, ok := g["players"].([]interface{}); ok {
 							for _, pRaw := range players {
 								if p, ok := pRaw.(map[string]interface{}); ok {
-									if username, ok := p["username"].(string); ok && selectedSet[username] {
+									var pUsername, pID string
+									if username, ok := p["username"].(string); ok {
+										pUsername = username
+									}
+									if id, ok := p["id"].(string); ok {
+										pID = id
+									}
+									if (pUsername != "" && selectedSet[pUsername]) || (pID != "" && selectedSet[pID]) {
 										p["selected"] = true
 									}
 								}
@@ -535,19 +542,25 @@ func (s *Server) dispatch(action wsMessage) map[string]interface{} {
 		var addedIds []string
 		for _, acc := range connected {
 			accID, _ := acc["id"].(string)
+			accUsername, _ := acc["username"].(string)
 			if accID == "" {
 				continue
+			}
+			if accUsername == "" {
+				accUsername = accID
 			}
 			if s.Manager.GetBotByAccount(accID) != nil {
 				continue
 			}
-			b := bot.New(accID, accID, accID, s.Bridge)
+			b := bot.New(accID, accUsername, accID, s.Bridge)
 			s.Manager.AddBot(b)
 			s.Manager.StartBot(context.Background(), b, 0)
-			addedIds = append(addedIds, accID)
+			addedIds = append(addedIds, accUsername)
 		}
 		// Persist newly-added bots to clerk.bots so they survive reloads and
-		// show as selected on the next listClerkPlayers.
+		// show as selected on the next listClerkPlayers. Persist the username
+		// (not the account id) so it matches ClerkPlayer.username used by
+		// listClerkPlayers when marking selected.
 		if s.Settings != nil && len(addedIds) > 0 {
 			var cur map[string]interface{}
 			_ = s.Settings.Read(&cur)

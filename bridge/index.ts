@@ -48,14 +48,14 @@ const server = Bun.serve({
               (p: any) => (playerIds ? playerIds.includes(p.username || p.id) : true) && (filter ? filter(p) : true),
               (account: any) => {
                 // push connected event
-                ws.send(JSON.stringify({ jsonrpc: "2.0", method: "account.connected", params: { id: account.id, account: { id: account.id } } }));
+                ws.send(JSON.stringify({ jsonrpc: "2.0", method: "account.connected", params: { id: account.id, username: account.username, account: { id: account.id, username: account.username } } }));
                 // listen disconnect
                 account.onDisconnected?.((err: any) => {
                   ws.send(JSON.stringify({ jsonrpc: "2.0", method: "account.disconnected", params: { id: account.id, reason: String(err) } }));
                 });
               },
             );
-            reply(accounts.map((a: any) => ({ id: a.id })));
+            reply(accounts.map((a: any) => ({ id: a.id, username: a.username })));
             break;
           }
           case "getAccount": {
