@@ -272,12 +272,29 @@ func (s *Server) dispatch(action wsMessage) map[string]interface{} {
 			if routine != "" && settings != nil {
 				cur[routine] = settings
 				log.Printf("saveSettings: routine=%s settings=%v", routine, settings)
-			} else if routine == "" {
+			}
+			// Handle clerkSelection (from general settings save)
+			if cs, ok := action.Data["clerkSelection"].(map[string]interface{}); ok {
+				checked, _ := cs["checked"].([]interface{})
+				bots := make([]string, 0, len(checked))
+				for _, c := range checked {
+					if s, ok := c.(string); ok {
+						bots = append(bots, s)
+					}
+				}
+				clerkObj, _ := cur["clerk"].(map[string]interface{})
+				if clerkObj == nil {
+					clerkObj = map[string]interface{}{}
+				}
+				clerkObj["bots"] = bots
+				cur["clerk"] = clerkObj
+			}
+			if routine == "" {
 				log.Printf("saveSettings: empty routine, data=%v", action.Data)
 				// No routine specified — save top-level keys directly into cur
 				hasKeys := false
 				for k, v := range action.Data {
-					if k == "type" || k == "routine" {
+					if k == "type" || k == "routine" || k == "clerkSelection" {
 						continue
 					}
 					cur[k] = v
@@ -325,6 +342,23 @@ func (s *Server) dispatch(action wsMessage) map[string]interface{} {
 	case "listClerkPlayers":
 		if s.Bridge == nil {
 			return map[string]interface{}{"ok": false, "error": "no bridge"}
+		}
+		// Initialize bridge clients with clerk API keys from settings
+		if s.Settings != nil {
+			var cur map[string]interface{}
+			_ = s.Settings.Read(&cur)
+			if cur != nil {
+				var keys []interface{}
+				if v, ok := cur["clerkApiKey"].(string); ok && v != "" {
+					keys = append(keys, v)
+				}
+				if v, ok := cur["clerkApiKey2"].(string); ok && v != "" {
+					keys = append(keys, v)
+				}
+				if len(keys) > 0 {
+					_, _ = s.Bridge.Call(context.Background(), "initClients", map[string]interface{}{"keys": keys})
+				}
+			}
 		}
 		res, err := s.Bridge.Call(context.Background(), "listOwnedPlayers", nil)
 		if err != nil {
