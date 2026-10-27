@@ -13,7 +13,7 @@ BINARY_NAME="spacemolt-lt"
 echo "========================================"
 echo "SpaceMolt LT Watchdog"
 echo "========================================"
-echo "" 
+echo ""
 echo "Configuration:"
 echo "  - Restart delay: $RESTART_DELAY seconds (mass disconnect)"
 echo "  - Manual restart delay: $MANUAL_RESTART_DELAY seconds (user-initiated)"
@@ -38,6 +38,14 @@ while true; do
     set +e
     cd "$SCRIPT_DIR"
 
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] Running git pull..."
+    git pull || echo "Warning: git pull failed or not a git repository"
+    echo ""
+
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] Installing bridge dependencies..."
+    bun install --cwd bridge || echo "Warning: bun install failed"
+    echo ""
+
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] Building Go binary..."
     go build -o "$BINARY_NAME" ./cmd/spacemolt-lt
     BUILD_EXIT=$?
@@ -46,14 +54,6 @@ while true; do
         break
     fi
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] Build complete."
-    echo ""
-
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] Running git pull..."
-    git pull || echo "Warning: git pull failed or not a git repository"
-    echo ""
-
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] Installing bridge dependencies..."
-    bun install --cwd bridge || echo "Warning: bun install failed"
     echo ""
 
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] Killing any existing bun/bridge processes on port 8787..."

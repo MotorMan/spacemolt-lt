@@ -37,18 +37,18 @@ echo.
     echo.
 
     cd /d "%SCRIPT_DIR%"
+    echo [%date% %time%] Running git pull...
+    git pull || echo Warning: git pull failed or not a git repository
+    echo.
+    echo [%date% %time%] Installing bridge dependencies...
+    bun install --cwd bridge || echo Warning: bun install failed
+    echo.
     echo [%date% %time%] Building Go binary...
     go build -o %BINARY_NAME% ./cmd/spacemolt-lt || (
         echo [%date% %time%] Build failed!
         goto :end
     )
     echo [%date% %time%] Build complete.
-    echo.
-    echo [%date% %time%] Running git pull...
-    git pull || echo Warning: git pull failed or not a git repository
-    echo.
-    echo [%date% %time%] Installing bridge dependencies...
-    bun install --cwd bridge || echo Warning: bun install failed
     echo.
     echo [%date% %time%] Killing any existing bun/bridge processes on port 8787...
     taskkill /F /IM bun.exe >nul 2>&1
@@ -102,3 +102,4 @@ echo.
     echo.
     echo Watchdog stopped.
     pause
+
