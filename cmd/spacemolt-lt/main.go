@@ -93,7 +93,9 @@ func main() {
 					Ship     string  `json:"ship"`
 					Credits  float64 `json:"credits"`
 					Fuel     float64 `json:"fuel"`
+					MaxFuel  float64 `json:"maxFuel"`
 					Hull     float64 `json:"hull"`
+					MaxHull  float64 `json:"maxHull"`
 				}
 				_ = json.Unmarshal(ev.Params, &p)
 				if b := mgr.GetBotByAccount(p.ID); b != nil {
@@ -103,7 +105,9 @@ func main() {
 						Ship:     p.Ship,
 						Credits:  p.Credits,
 						Fuel:     p.Fuel,
+						MaxFuel:  p.MaxFuel,
 						Hull:     p.Hull,
+						MaxHull:  p.MaxHull,
 						Cargo:    map[string]int{},
 					})
 				}

@@ -15,8 +15,10 @@ function sendAccountStatus(ws: any, account: any) {
     );
     return;
   }
+  const player = st.player ?? {};
+  const ship = st.ship ?? {};
   console.log(
-    `[bridge] account.status id=${account.id} username=${account.username} credits=${st.credits} fuel=${st.fuel} hull=${st.hull} system=${st.location?.system_id} poi=${st.location?.poi_id} ship=${st.ship?.name} cargo=${JSON.stringify(st.cargo)}`,
+    `[bridge] account.status id=${account.id} username=${account.username} credits=${player.credits} fuel=${ship.fuel} hull=${ship.hull} system=${st.location?.system_id} poi=${st.location?.poi_id} ship=${ship.name} cargo=${JSON.stringify(st.cargo)}`,
   );
   ws.send(
     JSON.stringify({
@@ -25,19 +27,19 @@ function sendAccountStatus(ws: any, account: any) {
       params: {
         id: account.id,
         username: account.username,
-        credits: st.credits,
-        fuel: st.fuel,
-        maxFuel: st.max_fuel ?? st.maxFuel,
-        hull: st.hull,
-        maxHull: st.max_hull ?? st.maxHull,
-        shield: st.shield,
-        maxShield: st.max_shield ?? st.maxShield,
+        credits: player.credits,
+        fuel: ship.fuel,
+        maxFuel: ship.max_fuel,
+        hull: ship.hull,
+        maxHull: ship.max_hull,
+        shield: ship.shield,
+        maxShield: ship.max_shield,
         cargo: st.cargo,
-        isCloaked: st.is_cloaked,
+        isCloaked: ship.is_cloaked,
         system: st.location?.system_id,
         poi: st.location?.poi_id,
         location: st.location?.id || st.location?.name,
-        ship: st.ship?.name || st.ship?.id,
+        ship: ship.name || ship.id,
       },
     }),
   );

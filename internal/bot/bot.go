@@ -15,6 +15,7 @@ type Status struct {
 	Ship       string                 `json:"ship"`
 	Credits    float64                `json:"credits"`
 	Fuel       float64                `json:"fuel"`
+	MaxFuel    float64                `json:"maxFuel"`
 	Hull       float64                `json:"hull"`
 	MaxHull    float64                `json:"maxHull"`
 	Cargo      map[string]int         `json:"cargo"`
@@ -167,6 +168,7 @@ func (b *Bot) SetStatus(s Status) {
 		b.System = s.Location
 	}
 	b.Fuel = s.Fuel
+	b.MaxFuel = s.MaxFuel
 	b.Hull = s.Hull
 	b.MaxHull = s.MaxHull
 	b.Credits = s.Credits
