@@ -549,18 +549,21 @@ func (s *Server) dispatch(action wsMessage) map[string]interface{} {
 			if accUsername == "" {
 				accUsername = accID
 			}
-			if s.Manager.GetBotByAccount(accID) != nil {
-				continue
+			// Create the bot if it doesn't already exist (it may have been
+			// created moments ago by the account.connected handler fired inside
+			// connectOwnedAccounts). Always track the username so we can
+			// persist it to clerk.bots below.
+			if s.Manager.GetBotByAccount(accID) == nil {
+				b := bot.New(accID, accUsername, accID, s.Bridge)
+				s.Manager.AddBot(b)
+				s.Manager.StartBot(context.Background(), b, 0)
 			}
-			b := bot.New(accID, accUsername, accID, s.Bridge)
-			s.Manager.AddBot(b)
-			s.Manager.StartBot(context.Background(), b, 0)
 			addedIds = append(addedIds, accUsername)
 		}
 		// Persist newly-added bots to clerk.bots so they survive reloads and
 		// show as selected on the next listClerkPlayers. Persist the username
-		// (not the account id) so it matches ClerkPlayer.username used by
-		// listClerkPlayers when marking selected.
+		// so it matches ClerkPlayer.username used by listClerkPlayers when
+		// marking selected.
 		if s.Settings != nil && len(addedIds) > 0 {
 			var cur map[string]interface{}
 			_ = s.Settings.Read(&cur)
@@ -590,7 +593,11 @@ func (s *Server) dispatch(action wsMessage) map[string]interface{} {
 			}
 			clerkObj["bots"] = bots
 			cur["clerk"] = clerkObj
-			_ = s.Settings.Write(cur)
+			if err := s.Settings.Write(cur); err != nil {
+				log.Printf("addClerkBots: settings write error: %v", err)
+				return map[string]interface{}{"ok": false, "error": err.Error()}
+			}
+			log.Printf("addClerkBots: persisted clerk.bots=%v", bots)
 		}
 		return map[string]interface{}{"ok": true, "data": map[string]interface{}{"added": len(addedIds), "ids": addedIds}}
 	case "bulkSetHunterMode":
