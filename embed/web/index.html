@@ -2297,6 +2297,7 @@
           applyWindowTitle();
           flockSettings = flockRes || { flockGroups: [], assignments: {} };
           lastUsedRoutines = lastUsedRoutinesRes || {};
+          bots = botsRes.bots || [];
           marketDetails = marketDetailsRes || { items: [] };
           // Fallback: migrate from settings.botAssignments if lastUsedRoutines is empty
           if (
@@ -2507,6 +2508,7 @@
               if (settings.clerk && Array.isArray(settings.clerk.bots)) {
                 for (const id of settings.clerk.bots) clerkSelection.add(id);
               }
+              renderBots();
               knownSystems = msg.knownSystems || [];
               knownOres = msg.knownOres || [];
               mobileCapitol = msg.mobileCapitol || null;
