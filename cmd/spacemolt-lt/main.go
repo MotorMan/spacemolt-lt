@@ -80,10 +80,13 @@ func main() {
 						b = bot.New(p.ID, username, p.ID, client)
 						mgr.AddBot(b)
 					}
-					if !b.IsRunning() {
-						log.Printf("account.connected: starting bot %s (%s)", p.ID, username)
-						mgr.StartBot(ctx, b, 0)
-					}
+			if !b.IsRunning() {
+				log.Printf("account.connected: starting bot %s (%s)", p.ID, username)
+				mgr.StartBot(ctx, b, 0)
+				// Pull initial state so the dashboard shows real data
+				// immediately instead of zeroed/unknown.
+				go b.RefreshStatus(ctx)
+			}
 				}
 			case "account.status":
 				var p struct {

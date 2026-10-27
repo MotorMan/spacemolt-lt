@@ -103,9 +103,10 @@ const server = Bun.serve({
                 account.onStateChange?.((_changed: any[]) => {
                   sendAccountStatus(ws, account);
                 });
-                // Seed state and send initial status immediately after connect
-                account.refresh().catch(() => {});
-                sendAccountStatus(ws, account);
+                // Seed state and send initial status after connect completes.
+                // Await refresh() first so account.state is populated before
+                // we read player.credits / ship.fuel etc. from it.
+                account.refresh().then(() => sendAccountStatus(ws, account)).catch(() => sendAccountStatus(ws, account));
               },
             );
             console.log(

@@ -208,10 +208,22 @@ func (b *Bot) ExecCommand(ctx context.Context, command string, params map[string
 }
 
 // RefreshStatus calls get_status via the bridge and updates local state.
+// The get_status structuredContent is a V2GameState with nested player.*,
+// ship.*, location.* fields — matching TS Bot.applyStatusResult() paths.
 func (b *Bot) RefreshStatus(ctx context.Context) error {
 	res, err := b.ExecCommand(ctx, "get_status", nil)
 	if err != nil || res == nil {
 		return err
+	}
+	// res is a QueryResult: { structuredContent: {...}, result: "human readable" }
+	var qr struct {
+		StructuredContent json.RawMessage `json:"structuredContent"`
+	}
+	if err := json.Unmarshal(res, &qr); err != nil {
+		return err
+	}
+	if len(qr.StructuredContent) == 0 {
+		return nil
 	}
 	var st struct {
 		System   string  `json:"system"`
@@ -227,30 +239,61 @@ func (b *Bot) RefreshStatus(ctx context.Context) error {
 		Credits  float64 `json:"credits"`
 		Cargo    map[string]int `json:"cargo"`
 	}
-	if err := json.Unmarshal(res, &st); err != nil {
+	// Try top-level first (some endpoints flatten), then fall back to nested
+	// player.* / ship.* / location.* paths matching TS applyStatusResult().
+	if err := json.Unmarshal(qr.StructuredContent, &st); err != nil {
 		return err
 	}
-	b.mu.Lock()
-	b.System = st.System
-	b.POI = st.POI
-	b.Docked = st.Docked
-	b.IsCloaked = st.IsCloaked
-	b.InTransit = st.InTransit
-	b.TransitType = st.TransitType
-	b.Fuel = st.Fuel
-	b.MaxFuel = st.MaxFuel
-	b.Hull = st.Hull
-	b.MaxHull = st.MaxHull
-	b.Credits = st.Credits
-	if st.Cargo != nil {
-		b.Cargo = st.Cargo
+	// If top-level is empty, try nested paths
+	if st.Credits == 0 && st.Fuel == 0 && st.Hull == 0 {
+		var nested struct {
+			Player struct {
+				Credits float64 `json:"credits"`
+			} `json:"player"`
+			Ship struct {
+				Fuel    float64 `json:"fuel"`
+				MaxFuel float64 `json:"maxFuel"`
+				Hull    float64 `json:"hull"`
+				MaxHull float64 `json:"maxHull"`
+			} `json:"ship"`
+			Location struct {
+				SystemID string `json:"system_id"`
+				POIID    string `json:"poi_id"`
+			} `json:"location"`
+		}
+		if err := json.Unmarshal(qr.StructuredContent, &nested); err == nil {
+			if st.Credits == 0 {
+				st.Credits = nested.Player.Credits
+			}
+			if st.Fuel == 0 {
+				st.Fuel = nested.Ship.Fuel
+			}
+			if st.MaxFuel == 0 {
+				st.MaxFuel = nested.Ship.MaxFuel
+			}
+			if st.Hull == 0 {
+				st.Hull = nested.Ship.Hull
+			}
+			if st.MaxHull == 0 {
+				st.MaxHull = nested.Ship.MaxHull
+			}
+			if st.System == "" {
+				st.System = nested.Location.SystemID
+			}
+			if st.POI == "" {
+				st.POI = nested.Location.POIID
+			}
+		}
 	}
-	b.mu.Unlock()
 	b.SetStatus(Status{
-		Location: st.System + "/" + st.POI,
+		System:   st.System,
+		POI:      st.POI,
 		Ship:     st.TransitType,
 		Credits:  st.Credits,
 		Fuel:     st.Fuel,
+		MaxFuel:  st.MaxFuel,
+		Hull:     st.Hull,
+		MaxHull:  st.MaxHull,
 		Cargo:    b.Cargo,
 	})
 	return nil

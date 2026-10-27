@@ -593,6 +593,10 @@ func (s *Server) dispatch(action wsMessage) map[string]interface{} {
 				b := bot.New(accID, accUsername, accID, s.Bridge)
 				s.Manager.AddBot(b)
 				s.Manager.StartBot(context.Background(), b, 0)
+				// Pull initial state so the dashboard shows real data
+				// immediately instead of zeroed/unknown until the next
+				// account.status event fires.
+				go b.RefreshStatus(context.Background())
 			}
 			addedIds = append(addedIds, accUsername)
 		}
