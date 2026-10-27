@@ -120,14 +120,6 @@ func (c *Client) reconnect(ctx context.Context) error {
 }
 
 func (c *Client) Call(ctx context.Context, method string, params interface{}) (json.RawMessage, error) {
-	// Apply a default timeout when the caller didn't set one, so a dropped
-	// connection or unresponsive bridge can't hang a command forever.
-	if _, ok := ctx.Deadline(); !ok {
-		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(ctx, 30*time.Second)
-		defer cancel()
-	}
-
 	// Ensure we have a live connection (reconnect if the read loop died).
 	if err := c.ensureConnected(ctx); err != nil {
 		return nil, err

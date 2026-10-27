@@ -79,6 +79,9 @@ const server = Bun.serve({
                     ship: st.ship?.name || st.ship?.id,
                   } }));
                 });
+                // Seed the account's state cache so exec queries return data
+                // immediately instead of waiting for the first state push.
+                account.refresh().catch(() => {});
               },
             );
             console.log(
@@ -114,7 +117,7 @@ const server = Bun.serve({
               }
             }
             console.log(
-              `[bridge] exec id=${req.params?.id} command=${req.params?.command} done`,
+              `[bridge] exec id=${req.params?.id} command=${req.params?.command} done result=${JSON.stringify(result)?.slice(0, 300)}`,
             );
             reply(result);
             break;
