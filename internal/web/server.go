@@ -217,9 +217,25 @@ func (s *Server) dispatch(action wsMessage) map[string]interface{} {
 		if settings == nil {
 			settings = map[string]interface{}{}
 		}
-		bots := make([]string, 0, len(s.Manager.ListBots()))
+		botObjs := make([]map[string]interface{}, 0, len(s.Manager.ListBots()))
 		for _, b := range s.Manager.ListBots() {
-			bots = append(bots, b.ID)
+			botObjs = append(botObjs, map[string]interface{}{
+				"id":        b.ID,
+				"name":      b.Username,
+				"username":  b.Username,
+				"state":     string(b.State),
+				"routine":   b.Routine,
+				"system":    b.System,
+				"poi":       b.POI,
+				"location":  b.System + "/" + b.POI,
+				"credits":   b.Credits,
+				"fuel":      b.Fuel,
+				"maxFuel":   b.MaxFuel,
+				"hull":      b.Hull,
+				"maxHull":   b.MaxHull,
+				"isCloaked": b.IsCloaked,
+				"cargo":     b.Cargo,
+			})
 		}
 		routineNames := make([]string, 0, len(routines.Registry))
 		for name := range routines.Registry {
@@ -228,7 +244,7 @@ func (s *Server) dispatch(action wsMessage) map[string]interface{} {
 		return map[string]interface{}{
 			"ok":       true,
 			"settings": settings,
-			"bots":     bots,
+			"bots":     botObjs,
 			"routines": routineNames,
 		}
 	case "listBots":
