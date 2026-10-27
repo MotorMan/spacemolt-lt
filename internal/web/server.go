@@ -32,8 +32,8 @@ type Hub struct {
 func NewHub() *Hub { return &Hub{clients: make(map[*websocket.Conn]bool)} }
 
 type Server struct {
-	Manager  *botmanager.Manager
-	Bridge   *bridge.Client
+	Manager  botMgr
+	Bridge   bridge.Caller
 	Settings *store.FileStore
 	Sync     *ssync.Client
 	Hub      *Hub
@@ -41,6 +41,17 @@ type Server struct {
 
 	cancel    context.CancelFunc
 	shutdownCh chan struct{}
+}
+
+// botMgr is the subset of botmanager.Manager used by the web server, extracted
+// as an interface so the dispatch handlers can be unit-tested with mocks.
+type botMgr interface {
+	ListBots() []*bot.Bot
+	GetBot(id string) *bot.Bot
+	GetBotByAccount(accountID string) *bot.Bot
+	AddBot(b *bot.Bot)
+	RemoveBot(id string)
+	StartBot(ctx context.Context, b *bot.Bot, delay time.Duration)
 }
 
 func New(m *botmanager.Manager, bc *bridge.Client, settings *store.FileStore, sc *ssync.Client, cancel context.CancelFunc) *Server {
@@ -504,7 +515,7 @@ func (s *Server) dispatch(action wsMessage) map[string]interface{} {
 			}
 		}
 		if len(ids) == 0 {
-			return map[string]interface{}{"ok": true, "data": map[string]interface{}{"added": 0, "ids": []interface{}{}}}
+			return map[string]interface{}{"ok": true, "data": map[string]interface{}{"added": float64(0), "ids": []interface{}{}}}
 		}
 		// Initialize bridge clients with clerk API keys from settings so
 		// connectOwned has the Clerk key available (same as listClerkPlayers).
@@ -599,7 +610,7 @@ func (s *Server) dispatch(action wsMessage) map[string]interface{} {
 			}
 			log.Printf("addClerkBots: persisted clerk.bots=%v", bots)
 		}
-		return map[string]interface{}{"ok": true, "data": map[string]interface{}{"added": len(addedIds), "ids": addedIds}}
+		return map[string]interface{}{"ok": true, "data": map[string]interface{}{"added": float64(len(addedIds)), "ids": addedIds}}
 	case "bulkSetHunterMode":
 		return map[string]interface{}{"ok": true}
 	case "chat":

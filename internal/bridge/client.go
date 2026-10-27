@@ -11,6 +11,14 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+// Caller is the subset of Client used by callers that only need to send
+// RPC requests and read responses. Extracted as an interface so other
+// packages (web, bot) can depend on it without importing the concrete
+// Client type, and so it can be mocked in tests.
+type Caller interface {
+	Call(ctx context.Context, method string, params interface{}) (json.RawMessage, error)
+}
+
 type Client struct {
 	url     string
 	conn    *websocket.Conn

@@ -30,7 +30,7 @@ type Bot struct {
 	Name      string
 	Username  string
 	AccountID string
-	Bridge    *bridge.Client
+	Bridge    bridge.Caller
 	Routine   string
 	State     BotState
 
@@ -54,7 +54,7 @@ type Bot struct {
 	cancel context.CancelFunc
 }
 
-func New(id, name, accountID string, bc *bridge.Client) *Bot {
+func New(id, name, accountID string, bc bridge.Caller) *Bot {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &Bot{
 		ID:        id,
