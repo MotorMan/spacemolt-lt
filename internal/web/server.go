@@ -9,6 +9,7 @@ import (
 	_ "net/http/pprof"
 	"os"
 	"runtime"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -268,6 +269,10 @@ func (s *Server) dispatch(action wsMessage) map[string]interface{} {
 				"cargo":     b.Cargo,
 			})
 		}
+		// Sort by username so the dashboard table is stable across pushes.
+		sort.Slice(botObjs, func(i, j int) bool {
+			return botObjs[i]["username"].(string) < botObjs[j]["username"].(string)
+		})
 		routineNames := make([]string, 0, len(routines.Registry))
 		for name := range routines.Registry {
 			routineNames = append(routineNames, name)
@@ -835,6 +840,11 @@ func (s *Server) handleBots(w http.ResponseWriter, r *http.Request) {
 			"cargo":     b.Cargo,
 		})
 	}
+	// Sort by username so the dashboard table is stable across pushes
+	// (Go map iteration order is randomized).
+	sort.Slice(botObjs, func(i, j int) bool {
+		return botObjs[i]["username"].(string) < botObjs[j]["username"].(string)
+	})
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(map[string]interface{}{"bots": botObjs})
 }

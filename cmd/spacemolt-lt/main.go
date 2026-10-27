@@ -88,13 +88,24 @@ func main() {
 			case "account.status":
 				var p struct {
 					ID       string  `json:"id"`
-					Location string  `json:"location"`
+					System   string  `json:"system"`
+					POI      string  `json:"poi"`
 					Ship     string  `json:"ship"`
 					Credits  float64 `json:"credits"`
+					Fuel     float64 `json:"fuel"`
+					Hull     float64 `json:"hull"`
 				}
 				_ = json.Unmarshal(ev.Params, &p)
 				if b := mgr.GetBotByAccount(p.ID); b != nil {
-					b.SetStatus(bot.Status{Location: p.Location, Ship: p.Ship, Credits: p.Credits, Cargo: map[string]int{}, Extra: map[string]interface{}{}})
+					b.SetStatus(bot.Status{
+						System:   p.System,
+						POI:      p.POI,
+						Ship:     p.Ship,
+						Credits:  p.Credits,
+						Fuel:     p.Fuel,
+						Hull:     p.Hull,
+						Cargo:    map[string]int{},
+					})
 				}
 			}
 		}

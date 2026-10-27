@@ -41,8 +41,6 @@ const server = Bun.serve({
           case "connectOwned": {
             const { filter, botIds, ids } = req.params || {};
             const playerIds = botIds ?? ids;
-            const clients = (globalThis as any).__clients ?? [];
-            // use libClient connectOwnedAccounts
             const { connectOwnedAccounts } = await import("./libClient.ts");
             const accounts = await connectOwnedAccounts(
               (p: any) => (playerIds ? playerIds.includes(p.username || p.id) : true) && (filter ? filter(p) : true),
@@ -52,6 +50,28 @@ const server = Bun.serve({
                 // listen disconnect
                 account.onDisconnected?.((err: any) => {
                   ws.send(JSON.stringify({ jsonrpc: "2.0", method: "account.disconnected", params: { id: account.id, reason: String(err) } }));
+                });
+                // forward live state changes to Go dashboard
+                account.onStateChange?.((_changed: any[]) => {
+                  const st = account.state as any;
+                  if (!st) return;
+                  ws.send(JSON.stringify({ jsonrpc: "2.0", method: "account.status", params: {
+                    id: account.id,
+                    username: account.username,
+                    credits: st.credits,
+                    fuel: st.fuel,
+                    maxFuel: st.max_fuel ?? st.maxFuel,
+                    hull: st.hull,
+                    maxHull: st.max_hull ?? st.maxHull,
+                    shield: st.shield,
+                    maxShield: st.max_shield ?? st.maxShield,
+                    cargo: st.cargo,
+                    isCloaked: st.is_cloaked,
+                    system: st.location?.system_id,
+                    poi: st.location?.poi_id,
+                    location: st.location?.id || st.location?.name,
+                    ship: st.ship?.name || st.ship?.id,
+                  } }));
                 });
               },
             );

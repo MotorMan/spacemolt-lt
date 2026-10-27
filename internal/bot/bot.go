@@ -10,9 +10,13 @@ import (
 
 type Status struct {
 	Location   string                 `json:"location"`
+	System     string                 `json:"system"`
+	POI        string                 `json:"poi"`
 	Ship       string                 `json:"ship"`
 	Credits    float64                `json:"credits"`
 	Fuel       float64                `json:"fuel"`
+	Hull       float64                `json:"hull"`
+	MaxHull    float64                `json:"maxHull"`
 	Cargo      map[string]int         `json:"cargo"`
 	Extra      map[string]interface{} `json:"-"`
 }
@@ -152,6 +156,23 @@ func (b *Bot) SetStatus(s Status) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	b.status = s
+	b.State = StateRunning
+	if s.System != "" {
+		b.System = s.System
+	}
+	if s.POI != "" {
+		b.POI = s.POI
+	}
+	if s.Location != "" {
+		b.System = s.Location
+	}
+	b.Fuel = s.Fuel
+	b.Hull = s.Hull
+	b.MaxHull = s.MaxHull
+	b.Credits = s.Credits
+	if s.Cargo != nil {
+		b.Cargo = s.Cargo
+	}
 }
 
 func (b *Bot) GetStatus() Status {
