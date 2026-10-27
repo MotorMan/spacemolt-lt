@@ -39,12 +39,13 @@ const server = Bun.serve({
             break;
           }
           case "connectOwned": {
-            const { filter, botIds } = req.params || {};
+            const { filter, botIds, ids } = req.params || {};
+            const playerIds = botIds ?? ids;
             const clients = (globalThis as any).__clients ?? [];
             // use libClient connectOwnedAccounts
             const { connectOwnedAccounts } = await import("./libClient.ts");
             const accounts = await connectOwnedAccounts(
-              (p: any) => (botIds ? botIds.includes(p.username || p.id) : true) && (filter ? filter(p) : true),
+              (p: any) => (playerIds ? playerIds.includes(p.username || p.id) : true) && (filter ? filter(p) : true),
               (account: any) => {
                 // push connected event
                 ws.send(JSON.stringify({ jsonrpc: "2.0", method: "account.connected", params: { id: account.id, account: { id: account.id } } }));

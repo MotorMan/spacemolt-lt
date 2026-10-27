@@ -481,16 +481,20 @@ func (s *Server) dispatch(action wsMessage) map[string]interface{} {
 			}
 		}
 		if len(ids) == 0 {
-			return map[string]interface{}{"ok": true, "added": 0, "ids": []interface{}{}}
+			return map[string]interface{}{"ok": true, "data": map[string]interface{}{"added": 0, "ids": []interface{}{}}}
 		}
+		log.Printf("addClerkBots: connecting %d account(s): %v", len(ids), ids)
 		res, err := s.Bridge.Call(context.Background(), "connectOwned", map[string]interface{}{"ids": ids})
 		if err != nil {
+			log.Printf("addClerkBots: connectOwned error: %v", err)
 			return map[string]interface{}{"ok": false, "error": err.Error()}
 		}
+		log.Printf("addClerkBots: connectOwned response: %s", string(res))
 		var connected []map[string]interface{}
 		if err := json.Unmarshal(res, &connected); err != nil {
 			return map[string]interface{}{"ok": false, "error": "failed to parse connected accounts: " + err.Error()}
 		}
+		log.Printf("addClerkBots: got %d connected accounts", len(connected))
 		var addedIds []string
 		for _, acc := range connected {
 			accID, _ := acc["id"].(string)
@@ -538,7 +542,7 @@ func (s *Server) dispatch(action wsMessage) map[string]interface{} {
 			cur["clerk"] = clerkObj
 			_ = s.Settings.Write(cur)
 		}
-		return map[string]interface{}{"ok": true, "added": len(addedIds), "ids": addedIds}
+		return map[string]interface{}{"ok": true, "data": map[string]interface{}{"added": len(addedIds), "ids": addedIds}}
 	case "bulkSetHunterMode":
 		return map[string]interface{}{"ok": true}
 	case "chat":

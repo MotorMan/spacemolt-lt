@@ -63,6 +63,17 @@ func main() {
 				if p.ID != "" {
 					mgr.RecordDisconnect(p.ID)
 				}
+			case "account.connected":
+				var p struct {
+					ID string `json:"id"`
+				}
+				_ = json.Unmarshal(ev.Params, &p)
+				if p.ID != "" && mgr.GetBotByAccount(p.ID) == nil {
+					log.Printf("account.connected: creating bot for %s", p.ID)
+					b := bot.New(p.ID, p.ID, p.ID, client)
+					mgr.AddBot(b)
+					mgr.StartBot(ctx, b, 0)
+				}
 			case "account.status":
 				var p struct {
 					ID       string  `json:"id"`
