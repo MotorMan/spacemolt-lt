@@ -177,7 +177,15 @@ func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
 			}
 			action := wsMessage{Type: actionType, Data: data}
 			resp := s.dispatch(action)
-			b, _ := json.Marshal(resp)
+			// Wrap response as actionResult (matching TS server format)
+			wrapped := map[string]interface{}{
+				"type":   "actionResult",
+				"action": actionType,
+			}
+			for k, v := range resp {
+				wrapped[k] = v
+			}
+			b, _ := json.Marshal(wrapped)
 			write(websocket.TextMessage, b)
 		}
 	}()
@@ -367,11 +375,23 @@ func (s *Server) dispatch(action wsMessage) map[string]interface{} {
 				}
 			}
 		}
-		res, err := s.Bridge.Call(context.Background(), "listOwnedPlayers", nil)
+		res, err := s.Bridge.Call(context.Background(), "listOwnedPlayersByKey", nil)
 		if err != nil {
 			return map[string]interface{}{"ok": false, "error": err.Error()}
 		}
-		return map[string]interface{}{"ok": true, "data": json.RawMessage(res)}
+		// Parse the bridge result and format for frontend
+		var groups []map[string]interface{}
+		if err := json.Unmarshal(res, &groups); err != nil {
+			// Maybe it's already an array
+			return map[string]interface{}{"ok": false, "error": "failed to parse groups: " + err.Error()}
+		}
+		count := 0
+		for _, g := range groups {
+			if players, ok := g["players"].([]interface{}); ok {
+				count += len(players)
+			}
+		}
+		return map[string]interface{}{"ok": true, "data": map[string]interface{}{"groups": groups, "count": count}}
 	case "addClerkBots":
 		return map[string]interface{}{"ok": true, "added": 0}
 	case "bulkSetHunterMode":
