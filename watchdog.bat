@@ -61,24 +61,28 @@ echo.
     echo.
     echo [%date% %time%] spacemolt-lt exited with code %EXIT_CODE% (raw ERRORLEVEL)
     
-    if %EXIT_CODE% EQU 0 (
-        echo === Normal shutdown - no restart ===
-        echo.
-        goto :end
-    ) else if %EXIT_CODE% EQU 100 (
-        echo.
-        echo === Restart requested (mass disconnect) ===
-        goto :dorestart
-    ) else if %EXIT_CODE% EQU 101 (
-        echo.
-        echo === Restart requested (user-initiated) ===
-        goto :dorestart_manual
-    ) else (
-        echo.
-        echo === Unexpected exit code %EXIT_CODE% - no restart ===
-        echo.
-        goto :end
-    )
+    if %EXIT_CODE% EQU 0 goto :normal_shutdown
+    if %EXIT_CODE% EQU 100 goto :mass_disconnect
+    if %EXIT_CODE% EQU 101 goto :manual_restart
+    echo.
+    echo === Unexpected exit code %EXIT_CODE% - no restart ===
+    echo.
+    goto :end
+
+    :normal_shutdown
+    echo === Normal shutdown - no restart ===
+    echo.
+    goto :end
+
+    :mass_disconnect
+    echo.
+    echo === Restart requested (mass disconnect) ===
+    goto :dorestart
+
+    :manual_restart
+    echo.
+    echo === Restart requested (user-initiated) ===
+    goto :dorestart_manual
 
     :dorestart
     echo.
