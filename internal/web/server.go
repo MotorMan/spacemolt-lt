@@ -113,6 +113,36 @@ func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
 	s.Hub.mu.Unlock()
 
 	var writeMu sync.Mutex
+
+	// Send init message on connect (matches TS server behavior)
+	go func() {
+		var settings map[string]interface{}
+		if s.Settings != nil {
+			_ = s.Settings.Read(&settings)
+		}
+		if settings == nil {
+			settings = map[string]interface{}{}
+		}
+		bots := make([]string, 0, len(s.Manager.ListBots()))
+		for _, b := range s.Manager.ListBots() {
+			bots = append(bots, b.ID)
+		}
+		routineNames := make([]string, 0, len(routines.Registry))
+		for name := range routines.Registry {
+			routineNames = append(routineNames, name)
+		}
+		initPayload := map[string]interface{}{
+			"type":     "init",
+			"bots":     bots,
+			"routines": routineNames,
+			"settings": settings,
+		}
+		b, _ := json.Marshal(initPayload)
+		writeMu.Lock()
+		_ = conn.WriteMessage(websocket.TextMessage, b)
+		writeMu.Unlock()
+	}()
+
 	write := func(mt int, data []byte) {
 		writeMu.Lock()
 		defer writeMu.Unlock()
