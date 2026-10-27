@@ -285,10 +285,7 @@ func shouldDeposit(ctx context.Context, b *bot.Bot, settings MinerSettings) bool
 		return false
 	}
 	// Use cargo count as a proxy for fullness if cargoMax isn't available.
-	total := 0
-	for _, q := range snap.Cargo {
-		total += q
-	}
+	total := snap.Cargo
 	// If we have any cargo and are docked, deposit.
 	if total > 0 && snap.Docked {
 		return true
@@ -296,7 +293,7 @@ func shouldDeposit(ctx context.Context, b *bot.Bot, settings MinerSettings) bool
 	// Heuristic: deposit when cargo count exceeds a rough threshold.
 	// The bridge status should provide cargoMax; without it, use a default of 100 stacks.
 	const defaultMaxStacks = 100
-	if total >= int(float64(defaultMaxStacks)*settings.CargoThreshold/100) {
+	if total >= float64(defaultMaxStacks)*settings.CargoThreshold/100 {
 		return true
 	}
 	return false

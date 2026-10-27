@@ -210,24 +210,13 @@ func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
 	for range ticker.C {
 		botObjs := make([]map[string]interface{}, 0, len(s.Manager.ListBots()))
 		for _, b := range s.Manager.ListBots() {
-			botObjs = append(botObjs, map[string]interface{}{
-				"id":        b.ID,
-				"name":      b.Username,
-				"username":  b.Username,
-				"state":     string(b.State),
-				"routine":   b.Routine,
-				"system":    b.System,
-				"poi":       b.POI,
-				"location":  b.System + "/" + b.POI,
-				"credits":   b.Credits,
-				"fuel":      b.Fuel,
-				"maxFuel":   b.MaxFuel,
-				"hull":      b.Hull,
-				"maxHull":   b.MaxHull,
-				"isCloaked": b.IsCloaked,
-				"cargo":     b.Cargo,
-			})
+			botObjs = append(botObjs, botToObj(b))
 		}
+		// Sort by username so the dashboard table is stable across pushes
+		// (Go map iteration order is randomized).
+		sort.Slice(botObjs, func(i, j int) bool {
+			return botObjs[i]["username"].(string) < botObjs[j]["username"].(string)
+		})
 		payload := map[string]interface{}{
 			"type": "status",
 			"bots": botObjs,
@@ -251,23 +240,7 @@ func (s *Server) dispatch(action wsMessage) map[string]interface{} {
 		}
 		botObjs := make([]map[string]interface{}, 0, len(s.Manager.ListBots()))
 		for _, b := range s.Manager.ListBots() {
-			botObjs = append(botObjs, map[string]interface{}{
-				"id":        b.ID,
-				"name":      b.Username,
-				"username":  b.Username,
-				"state":     string(b.State),
-				"routine":   b.Routine,
-				"system":    b.System,
-				"poi":       b.POI,
-				"location":  b.System + "/" + b.POI,
-				"credits":   b.Credits,
-				"fuel":      b.Fuel,
-				"maxFuel":   b.MaxFuel,
-				"hull":      b.Hull,
-				"maxHull":   b.MaxHull,
-				"isCloaked": b.IsCloaked,
-				"cargo":     b.Cargo,
-			})
+			botObjs = append(botObjs, botToObj(b))
 		}
 		// Sort by username so the dashboard table is stable across pushes.
 		sort.Slice(botObjs, func(i, j int) bool {
@@ -819,6 +792,32 @@ func (s *Server) handleSettings(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(settings)
 }
 
+// botToObj converts a *bot.Bot into the frontend's expected camelCase object.
+// Matches TS BotStatus shape exactly: credits, fuel, maxFuel, cargo (total
+// used, number), cargoMax (capacity), hull, maxHull, shield, maxShield, etc.
+func botToObj(b *bot.Bot) map[string]interface{} {
+	return map[string]interface{}{
+		"id":        b.ID,
+		"name":      b.Username,
+		"username":  b.Username,
+		"state":     string(b.State),
+		"routine":   b.Routine,
+		"system":    b.System,
+		"poi":       b.POI,
+		"location":  b.System + "/" + b.POI,
+		"credits":   b.Credits,
+		"fuel":      b.Fuel,
+		"maxFuel":   b.MaxFuel,
+		"hull":      b.Hull,
+		"maxHull":   b.MaxHull,
+		"shield":    b.Shield,
+		"maxShield": b.MaxShield,
+		"isCloaked": b.IsCloaked,
+		"cargo":     b.Cargo,
+		"cargoMax":  b.CargoMax,
+	}
+}
+
 func (s *Server) handleBots(w http.ResponseWriter, r *http.Request) {
 	if s.Manager == nil {
 		http.Error(w, "no manager", 500)
@@ -826,23 +825,7 @@ func (s *Server) handleBots(w http.ResponseWriter, r *http.Request) {
 	}
 	botObjs := make([]map[string]interface{}, 0, len(s.Manager.ListBots()))
 	for _, b := range s.Manager.ListBots() {
-		botObjs = append(botObjs, map[string]interface{}{
-			"id":        b.ID,
-			"name":      b.Username,
-			"username":  b.Username,
-			"state":     string(b.State),
-			"routine":   b.Routine,
-			"system":    b.System,
-			"poi":       b.POI,
-			"location":  b.System + "/" + b.POI,
-			"credits":   b.Credits,
-			"fuel":      b.Fuel,
-			"maxFuel":   b.MaxFuel,
-			"hull":      b.Hull,
-			"maxHull":   b.MaxHull,
-			"isCloaked": b.IsCloaked,
-			"cargo":     b.Cargo,
-		})
+		botObjs = append(botObjs, botToObj(b))
 	}
 	// Sort by username so the dashboard table is stable across pushes
 	// (Go map iteration order is randomized).

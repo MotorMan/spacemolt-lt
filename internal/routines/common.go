@@ -552,15 +552,10 @@ func DepositCargo(ctx context.Context, b *bot.Bot, settings MinerSettings) error
 // CargoFullness returns cargo used / max capacity, or -1 if unknown.
 func CargoFullness(b *bot.Bot) (float64, bool) {
 	snap := b.Snapshot()
-	if snap.MaxFuel <= 0 && len(snap.Cargo) == 0 {
+	if snap.MaxFuel <= 0 && snap.Cargo == 0 {
 		return 0, false
 	}
-	// Estimate from cargo map: sum quantities as a rough proxy.
-	// The bridge should provide cargoMax/cargo in status; fall back to 0.
-	total := 0
-	for _, q := range snap.Cargo {
-		total += q
-	}
-	return float64(total), true
+	// snap.Cargo is total cargo used (float64).
+	return snap.Cargo, true
 }
 

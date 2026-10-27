@@ -18,7 +18,10 @@ type Status struct {
 	MaxFuel    float64                `json:"maxFuel"`
 	Hull       float64                `json:"hull"`
 	MaxHull    float64                `json:"maxHull"`
-	Cargo      map[string]int         `json:"cargo"`
+	Shield     float64                `json:"shield"`
+	MaxShield  float64                `json:"maxShield"`
+	Cargo      float64                `json:"cargo"`
+	CargoMax   float64                `json:"cargoMax"`
 	Extra      map[string]interface{} `json:"-"`
 }
 
@@ -49,8 +52,11 @@ type Bot struct {
 	MaxFuel  float64
 	Hull     float64
 	MaxHull  float64
+	Shield   float64
+	MaxShield float64
 	Credits  float64
-	Cargo    map[string]int
+	Cargo    float64
+	CargoMax float64
 
 	mu     sync.RWMutex
 	status Status
@@ -70,8 +76,8 @@ func New(id, name, accountID string, bc bridge.Caller) *Bot {
 		State:     StateRunning,
 		ctx:       ctx,
 		cancel:    cancel,
-		status:    Status{Cargo: map[string]int{}, Extra: map[string]interface{}{}},
-		Cargo:     map[string]int{},
+		status:    Status{Cargo: 0, Extra: map[string]interface{}{}},
+		Cargo:     0,
 	}
 }
 
@@ -150,7 +156,7 @@ type BotStateSnapshot struct {
 	Hull       float64
 	MaxHull    float64
 	Credits    float64
-	Cargo      map[string]int
+	Cargo      float64
 }
 
 func (b *Bot) SetStatus(s Status) {
@@ -169,12 +175,13 @@ func (b *Bot) SetStatus(s Status) {
 	}
 	b.Fuel = s.Fuel
 	b.MaxFuel = s.MaxFuel
+	b.Shield = s.Shield
+	b.MaxShield = s.MaxShield
 	b.Hull = s.Hull
 	b.MaxHull = s.MaxHull
 	b.Credits = s.Credits
-	if s.Cargo != nil {
-		b.Cargo = s.Cargo
-	}
+	b.CargoMax = s.CargoMax
+	b.Cargo = s.Cargo
 }
 
 func (b *Bot) GetStatus() Status {
@@ -236,7 +243,10 @@ func (b *Bot) RefreshStatus(ctx context.Context) error {
 		MaxFuel  float64 `json:"maxFuel"`
 		Hull     float64 `json:"hull"`
 		MaxHull  float64 `json:"maxHull"`
+		Shield   float64 `json:"shield"`
+		MaxShield float64 `json:"maxShield"`
 		Credits  float64 `json:"credits"`
+		CargoMax float64 `json:"cargoMax"`
 		Cargo    map[string]int `json:"cargo"`
 	}
 	// Try top-level first (some endpoints flatten), then fall back to nested
@@ -255,6 +265,9 @@ func (b *Bot) RefreshStatus(ctx context.Context) error {
 				MaxFuel float64 `json:"maxFuel"`
 				Hull    float64 `json:"hull"`
 				MaxHull float64 `json:"maxHull"`
+				Shield  float64 `json:"shield"`
+				MaxShield float64 `json:"maxShield"`
+				CargoCapacity float64 `json:"cargo_capacity"`
 			} `json:"ship"`
 			Location struct {
 				SystemID string `json:"system_id"`
@@ -277,6 +290,15 @@ func (b *Bot) RefreshStatus(ctx context.Context) error {
 			if st.MaxHull == 0 {
 				st.MaxHull = nested.Ship.MaxHull
 			}
+			if st.Shield == 0 {
+				st.Shield = nested.Ship.Shield
+			}
+			if st.MaxShield == 0 {
+				st.MaxShield = nested.Ship.MaxShield
+			}
+			if st.CargoMax == 0 {
+				st.CargoMax = nested.Ship.CargoCapacity
+			}
 			if st.System == "" {
 				st.System = nested.Location.SystemID
 			}
@@ -284,6 +306,10 @@ func (b *Bot) RefreshStatus(ctx context.Context) error {
 				st.POI = nested.Location.POIID
 			}
 		}
+	}
+	totalCargo := 0
+	for _, qty := range st.Cargo {
+		totalCargo += qty
 	}
 	b.SetStatus(Status{
 		System:   st.System,
@@ -294,7 +320,10 @@ func (b *Bot) RefreshStatus(ctx context.Context) error {
 		MaxFuel:  st.MaxFuel,
 		Hull:     st.Hull,
 		MaxHull:  st.MaxHull,
-		Cargo:    b.Cargo,
+		Shield:   st.Shield,
+		MaxShield: st.MaxShield,
+		Cargo:    float64(totalCargo),
+		CargoMax: st.CargoMax,
 	})
 	return nil
 }

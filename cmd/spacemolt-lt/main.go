@@ -80,13 +80,13 @@ func main() {
 						b = bot.New(p.ID, username, p.ID, client)
 						mgr.AddBot(b)
 					}
-			if !b.IsRunning() {
-				log.Printf("account.connected: starting bot %s (%s)", p.ID, username)
-				mgr.StartBot(ctx, b, 0)
-				// Pull initial state so the dashboard shows real data
-				// immediately instead of zeroed/unknown.
-				go b.RefreshStatus(ctx)
-			}
+					if !b.IsRunning() {
+						log.Printf("account.connected: starting bot %s (%s)", p.ID, username)
+						mgr.StartBot(ctx, b, 0)
+						// Pull initial state so the dashboard shows real data
+						// immediately instead of zeroed/unknown.
+						go b.RefreshStatus(ctx)
+					}
 				}
 			case "account.status":
 				var p struct {
@@ -99,6 +99,8 @@ func main() {
 					MaxFuel  float64 `json:"maxFuel"`
 					Hull     float64 `json:"hull"`
 					MaxHull  float64 `json:"maxHull"`
+					Shield   float64 `json:"shield"`
+					MaxShield float64 `json:"maxShield"`
 				}
 				_ = json.Unmarshal(ev.Params, &p)
 				if b := mgr.GetBotByAccount(p.ID); b != nil {
@@ -111,7 +113,10 @@ func main() {
 						MaxFuel:  p.MaxFuel,
 						Hull:     p.Hull,
 						MaxHull:  p.MaxHull,
-						Cargo:    map[string]int{},
+						Shield:   p.Shield,
+						MaxShield: p.MaxShield,
+						Cargo:    0,
+						CargoMax: 0,
 					})
 				}
 			}
