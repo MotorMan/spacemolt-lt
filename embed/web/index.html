@@ -13989,6 +13989,7 @@
       }
 
       function renderSettingsPanel() {
+        console.log("renderSettingsPanel called, activeTab:", activeSettingsTab, "settings keys:", Object.keys(settings || {}));
         const panel = document.getElementById("settingsContent");
         if (!panel) return;
         const dispatch = {
