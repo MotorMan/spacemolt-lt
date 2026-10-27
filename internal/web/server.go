@@ -343,13 +343,38 @@ func (s *Server) dispatch(action wsMessage) map[string]interface{} {
 				clerkObj = map[string]interface{}{}
 			}
 			if v, ok := action.Data["clerkApiKey"]; ok {
-				clerkObj["apiKey"] = v
+				if s, ok := v.(string); ok {
+					clerkObj["apiKey"] = strings.TrimSpace(s)
+				} else {
+					clerkObj["apiKey"] = v
+				}
 			}
 			if v, ok := action.Data["clerkApiKey2"]; ok {
-				clerkObj["apiKey2"] = v
+				if s, ok := v.(string); ok {
+					clerkObj["apiKey2"] = strings.TrimSpace(s)
+				} else {
+					clerkObj["apiKey2"] = v
+				}
 			}
 			cur["clerk"] = clerkObj
 			_ = s.Settings.Write(cur)
+			// Initialize bridge clients with the saved key(s) so the Clerk API key
+			// is sent to spacemolt/lib immediately, not just on next
+			// listClerkPlayers or restart.
+			if s.Bridge != nil {
+				var keys []interface{}
+				if v, ok := clerkObj["apiKey"].(string); ok && v != "" {
+					keys = append(keys, v)
+				}
+				if v, ok := clerkObj["apiKey2"].(string); ok && v != "" {
+					keys = append(keys, v)
+				}
+				if len(keys) > 0 {
+					if _, err := s.Bridge.Call(context.Background(), "initClients", map[string]interface{}{"keys": keys}); err != nil {
+						log.Printf("setClerkKey: initClients error: %v", err)
+					}
+				}
+			}
 		}
 		return map[string]interface{}{"ok": true}
 	case "listClerkPlayers":

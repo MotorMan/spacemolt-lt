@@ -126,11 +126,13 @@ func main() {
 	// init bridge clients from settings
 	if settings != nil {
 		keys := []interface{}{}
-		if v, ok := settings["clerkApiKey"]; ok {
-			keys = append(keys, v)
-		}
-		if v, ok := settings["clerkApiKey2"]; ok {
-			keys = append(keys, v)
+		if clerkObj, ok := settings["clerk"].(map[string]interface{}); ok {
+			if v, ok := clerkObj["apiKey"]; ok {
+				keys = append(keys, v)
+			}
+			if v, ok := clerkObj["apiKey2"]; ok {
+				keys = append(keys, v)
+			}
 		}
 		strKeys := make([]string, 0, len(keys))
 		for _, k := range keys {
