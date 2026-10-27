@@ -69,15 +69,21 @@ func main() {
 					Username string `json:"username"`
 				}
 				_ = json.Unmarshal(ev.Params, &p)
-				if p.ID != "" && mgr.GetBotByAccount(p.ID) == nil {
+				if p.ID != "" {
 					username := p.Username
 					if username == "" {
 						username = p.ID
 					}
-					log.Printf("account.connected: creating bot for %s (%s)", p.ID, username)
-					b := bot.New(p.ID, username, p.ID, client)
-					mgr.AddBot(b)
-					mgr.StartBot(ctx, b, 0)
+					b := mgr.GetBotByAccount(p.ID)
+					if b == nil {
+						log.Printf("account.connected: creating bot for %s (%s)", p.ID, username)
+						b = bot.New(p.ID, username, p.ID, client)
+						mgr.AddBot(b)
+					}
+					if !b.IsRunning() {
+						log.Printf("account.connected: starting bot %s (%s)", p.ID, username)
+						mgr.StartBot(ctx, b, 0)
+					}
 				}
 			case "account.status":
 				var p struct {
@@ -98,26 +104,29 @@ func main() {
 	for i, b := range mgr.ListBots() {
 		mgr.StartBot(ctx, b, time.Duration(i)*2*time.Second)
 	}
-	// Restore bots from persisted clerk.bots so they survive client restarts.
-	settingsStore := store.New("data/settings.json")
-	var settings map[string]interface{}
-	_ = settingsStore.Read(&settings)
-	if settings != nil {
-		if clerkObj, ok := settings["clerk"].(map[string]interface{}); ok {
-			if botsRaw, ok := clerkObj["bots"].([]interface{}); ok {
-				for _, bRaw := range botsRaw {
-					id, _ := bRaw.(string)
-					if id == "" || mgr.GetBotByAccount(id) != nil {
-						continue
+		// Restore bots from persisted clerk.bots so they survive client restarts.
+		// Create them but do NOT start yet — they'll be started when the
+		// account.connected event fires from startup connectOwned below.
+		settingsStore := store.New("data/settings.json")
+		var settings map[string]interface{}
+		_ = settingsStore.Read(&settings)
+		if settings != nil {
+			if clerkObj, ok := settings["clerk"].(map[string]interface{}); ok {
+				if botsRaw, ok := clerkObj["bots"].([]interface{}); ok {
+					for _, bRaw := range botsRaw {
+						id, _ := bRaw.(string)
+						if id == "" || mgr.GetBotByAccount(id) != nil {
+							continue
+						}
+						log.Printf("restoring clerk bot %s from settings", id)
+						b := bot.New(id, id, id, client)
+						mgr.AddBot(b)
+						// Don't StartBot here — wait for account.connected from
+						// connectOwned below so the bridge connection is live first.
 					}
-					log.Printf("restoring clerk bot %s from settings", id)
-					b := bot.New(id, id, id, client)
-					mgr.AddBot(b)
-					mgr.StartBot(ctx, b, 0)
 				}
 			}
 		}
-	}
 
 	// Read sync settings and create sync client/master.
 	syncSettings := sync.DefaultSettings()
@@ -175,6 +184,27 @@ func main() {
 		}
 		if len(strKeys) > 0 {
 			_, _ = client.Call(context.Background(), "initClients", map[string]interface{}{"keys": strKeys})
+		}
+		// Connect any bots persisted in clerk.bots so they come back online
+		// after a restart, not just sit there disconnected.
+		if settings != nil {
+			if clerkObj, ok := settings["clerk"].(map[string]interface{}); ok {
+				if botsRaw, ok := clerkObj["bots"].([]interface{}); ok {
+					var botIds []string
+					for _, b := range botsRaw {
+						if id, ok := b.(string); ok && id != "" {
+							botIds = append(botIds, id)
+						}
+					}
+					if len(botIds) > 0 {
+						if _, err := client.Call(context.Background(), "connectOwned", map[string]interface{}{"ids": botIds}); err != nil {
+							log.Printf("startup connectOwned error: %v", err)
+						} else {
+							log.Printf("startup: connecting %d clerk bot(s): %v", len(botIds), botIds)
+						}
+					}
+				}
+			}
 		}
 	}
 
