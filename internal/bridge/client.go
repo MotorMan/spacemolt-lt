@@ -62,6 +62,7 @@ func (c *Client) readLoop(conn *websocket.Conn) {
 		_, data, err := conn.ReadMessage()
 		if err != nil {
 			c.mu.Lock()
+			c.conn = nil // mark connection as closed so Callers know
 			for id, ch := range c.pending {
 				ch <- &Response{ID: id, Error: &RPCError{Code: -1, Message: err.Error()}}
 				delete(c.pending, id)
@@ -95,7 +96,35 @@ func (c *Client) readLoop(conn *websocket.Conn) {
 	}
 }
 
+// reconnect redials the WebSocket and starts a new read loop. Safe to call
+// from any goroutine; returns nil if already connected or reconnect succeeds.
+func (c *Client) reconnect(ctx context.Context) error {
+	c.mu.Lock()
+	if c.conn != nil {
+		c.mu.Unlock()
+		return nil
+	}
+	c.mu.Unlock()
+
+	dialer := websocket.Dialer{HandshakeTimeout: 10 * time.Second}
+	conn, _, err := dialer.DialContext(ctx, c.url, nil)
+	if err != nil {
+		return err
+	}
+
+	c.mu.Lock()
+	c.conn = conn
+	c.mu.Unlock()
+	go c.readLoop(conn)
+	return nil
+}
+
 func (c *Client) Call(ctx context.Context, method string, params interface{}) (json.RawMessage, error) {
+	// Ensure we have a live connection (reconnect if the read loop died).
+	if err := c.ensureConnected(ctx); err != nil {
+		return nil, err
+	}
+
 	c.mu.Lock()
 	if c.conn == nil {
 		c.mu.Unlock()
@@ -108,16 +137,37 @@ func (c *Client) Call(ctx context.Context, method string, params interface{}) (j
 	conn := c.conn
 
 	req := Request{JSONRPC: "2.0", ID: id, Method: method, Params: params}
-	data, _ := json.Marshal(req)
 	err := conn.WriteJSON(req)
 	c.mu.Unlock()
-	_ = data
 
 	if err != nil {
 		c.mu.Lock()
 		delete(c.pending, id)
 		c.mu.Unlock()
-		return nil, err
+		// Connection likely closed — try to reconnect once and retry.
+		if rerr := c.reconnect(ctx); rerr != nil {
+			return nil, fmt.Errorf("write failed: %w; reconnect failed: %w", err, rerr)
+		}
+		// Retry the call once on the new connection.
+		c.mu.Lock()
+		if c.conn == nil {
+			c.mu.Unlock()
+			return nil, fmt.Errorf("write failed: %w; connection closed", err)
+		}
+		c.idSeq++
+		id = c.idSeq
+		ch = make(chan *Response, 1)
+		c.pending[id] = ch
+		conn = c.conn
+		req := Request{JSONRPC: "2.0", ID: id, Method: method, Params: params}
+		err = conn.WriteJSON(req)
+		c.mu.Unlock()
+		if err != nil {
+			c.mu.Lock()
+			delete(c.pending, id)
+			c.mu.Unlock()
+			return nil, fmt.Errorf("write failed after reconnect: %w", err)
+		}
 	}
 
 	select {
@@ -132,6 +182,18 @@ func (c *Client) Call(ctx context.Context, method string, params interface{}) (j
 		}
 		return resp.Result, nil
 	}
+}
+
+// ensureConnected returns nil if the client has a live connection, or
+// attempts to reconnect and returns nil on success, or an error if it cannot.
+func (c *Client) ensureConnected(ctx context.Context) error {
+	c.mu.Lock()
+	if c.conn != nil {
+		c.mu.Unlock()
+		return nil
+	}
+	c.mu.Unlock()
+	return c.reconnect(ctx)
 }
 
 func (c *Client) Events() <-chan Event { return c.events }
