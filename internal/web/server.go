@@ -370,6 +370,16 @@ func (s *Server) dispatch(action wsMessage) map[string]interface{} {
 						keys = append(keys, v)
 					}
 				}
+				// Fallback: old format (top-level clerkApiKey)
+				if len(keys) == 0 {
+					if v, ok := cur["clerkApiKey"].(string); ok && v != "" {
+						keys = append(keys, v)
+					}
+					if v, ok := cur["clerkApiKey2"].(string); ok && v != "" {
+						keys = append(keys, v)
+					}
+				}
+				log.Printf("listClerkPlayers: found %d keys", len(keys))
 				if len(keys) > 0 {
 					if _, err := s.Bridge.Call(context.Background(), "initClients", map[string]interface{}{"keys": keys}); err != nil {
 						log.Printf("listClerkPlayers: initClients error: %v", err)
