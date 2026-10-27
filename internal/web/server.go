@@ -207,9 +207,29 @@ func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
 	ticker := time.NewTicker(250 * time.Millisecond)
 	defer ticker.Stop()
 	for range ticker.C {
+		botObjs := make([]map[string]interface{}, 0, len(s.Manager.ListBots()))
+		for _, b := range s.Manager.ListBots() {
+			botObjs = append(botObjs, map[string]interface{}{
+				"id":        b.ID,
+				"name":      b.Username,
+				"username":  b.Username,
+				"state":     string(b.State),
+				"routine":   b.Routine,
+				"system":    b.System,
+				"poi":       b.POI,
+				"location":  b.System + "/" + b.POI,
+				"credits":   b.Credits,
+				"fuel":      b.Fuel,
+				"maxFuel":   b.MaxFuel,
+				"hull":      b.Hull,
+				"maxHull":   b.MaxHull,
+				"isCloaked": b.IsCloaked,
+				"cargo":     b.Cargo,
+			})
+		}
 		payload := map[string]interface{}{
 			"type": "status",
-			"bots": len(s.Manager.ListBots()),
+			"bots": botObjs,
 		}
 		b, _ := json.Marshal(payload)
 		write(websocket.TextMessage, b)
