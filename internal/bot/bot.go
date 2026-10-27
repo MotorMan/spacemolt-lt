@@ -245,9 +245,9 @@ func (b *Bot) RefreshStatus(ctx context.Context) error {
 		MaxHull  float64 `json:"maxHull"`
 		Shield   float64 `json:"shield"`
 		MaxShield float64 `json:"maxShield"`
-		Credits  float64 `json:"credits"`
-		CargoMax float64 `json:"cargoMax"`
-		Cargo    map[string]int `json:"cargo"`
+		Credits  float64                `json:"credits"`
+		CargoMax float64                `json:"cargoMax"`
+		Cargo    json.RawMessage      `json:"cargo"`
 	}
 	// Try top-level first (some endpoints flatten), then fall back to nested
 	// player.* / ship.* / location.* paths matching TS applyStatusResult().
@@ -299,6 +299,15 @@ func (b *Bot) RefreshStatus(ctx context.Context) error {
 			if st.CargoMax == 0 {
 				st.CargoMax = nested.Ship.CargoCapacity
 			}
+			if st.Shield == 0 {
+				st.Shield = nested.Ship.Shield
+			}
+			if st.MaxShield == 0 {
+				st.MaxShield = nested.Ship.MaxShield
+			}
+			if st.CargoMax == 0 {
+				st.CargoMax = nested.Ship.CargoCapacity
+			}
 			if st.System == "" {
 				st.System = nested.Location.SystemID
 			}
@@ -307,10 +316,7 @@ func (b *Bot) RefreshStatus(ctx context.Context) error {
 			}
 		}
 	}
-	totalCargo := 0
-	for _, qty := range st.Cargo {
-		totalCargo += qty
-	}
+	totalCargo := float64(0)
 	b.SetStatus(Status{
 		System:   st.System,
 		POI:      st.POI,
