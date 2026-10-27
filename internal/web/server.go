@@ -118,7 +118,7 @@ func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
 	go func() {
 		var settings map[string]interface{}
 		if s.Settings != nil {
-			_ = s.Settings.Read(&settings)
+			_ = s.Settings.Read(&settings); log.Printf("init: read=%v", settings)
 		}
 		if settings == nil {
 			settings = map[string]interface{}{}
@@ -202,7 +202,7 @@ func (s *Server) dispatch(action wsMessage) map[string]interface{} {
 	case "init":
 		var settings map[string]interface{}
 		if s.Settings != nil {
-			_ = s.Settings.Read(&settings)
+			_ = s.Settings.Read(&settings); log.Printf("init: read=%v", settings)
 		}
 		if settings == nil {
 			settings = map[string]interface{}{}
@@ -323,19 +323,24 @@ func (s *Server) dispatch(action wsMessage) map[string]interface{} {
 		}
 		return map[string]interface{}{"ok": true}
 	case "setClerkKey":
-		// store keys in settings
+		// store keys in settings under clerk object (matching TS convention)
 		if s.Settings != nil {
 			var cur map[string]interface{}
 			_ = s.Settings.Read(&cur)
 			if cur == nil {
 				cur = map[string]interface{}{}
 			}
+			clerkObj, _ := cur["clerk"].(map[string]interface{})
+			if clerkObj == nil {
+				clerkObj = map[string]interface{}{}
+			}
 			if v, ok := action.Data["clerkApiKey"]; ok {
-				cur["clerkApiKey"] = v
+				clerkObj["apiKey"] = v
 			}
 			if v, ok := action.Data["clerkApiKey2"]; ok {
-				cur["clerkApiKey2"] = v
+				clerkObj["apiKey2"] = v
 			}
+			cur["clerk"] = clerkObj
 			_ = s.Settings.Write(cur)
 		}
 		return map[string]interface{}{"ok": true}
@@ -349,11 +354,13 @@ func (s *Server) dispatch(action wsMessage) map[string]interface{} {
 			_ = s.Settings.Read(&cur)
 			if cur != nil {
 				var keys []interface{}
-				if v, ok := cur["clerkApiKey"].(string); ok && v != "" {
-					keys = append(keys, v)
-				}
-				if v, ok := cur["clerkApiKey2"].(string); ok && v != "" {
-					keys = append(keys, v)
+				if clerkObj, ok := cur["clerk"].(map[string]interface{}); ok {
+					if v, ok := clerkObj["apiKey"].(string); ok && v != "" {
+						keys = append(keys, v)
+					}
+					if v, ok := clerkObj["apiKey2"].(string); ok && v != "" {
+						keys = append(keys, v)
+					}
 				}
 				if len(keys) > 0 {
 					_, _ = s.Bridge.Call(context.Background(), "initClients", map[string]interface{}{"keys": keys})
@@ -537,7 +544,7 @@ func (s *Server) handleSettings(w http.ResponseWriter, r *http.Request) {
 	}
 	var settings map[string]interface{}
 	if s.Settings != nil {
-		_ = s.Settings.Read(&settings)
+		_ = s.Settings.Read(&settings); log.Printf("init: read=%v", settings)
 		log.Printf("handleSettings: read=%v", settings)
 	}
 	if settings == nil {
