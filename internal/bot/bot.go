@@ -12,6 +12,7 @@ type Status struct {
 	Location   string                 `json:"location"`
 	System     string                 `json:"system"`
 	POI        string                 `json:"poi"`
+	ShipName   string                 `json:"shipName"`
 	Ship       string                 `json:"ship"`
 	Credits    float64                `json:"credits"`
 	Fuel       float64                `json:"fuel"`
@@ -57,6 +58,7 @@ type Bot struct {
 	Credits  float64
 	Cargo    float64
 	CargoMax float64
+	ShipName string
 
 	mu     sync.RWMutex
 	status Status
@@ -182,6 +184,7 @@ func (b *Bot) SetStatus(s Status) {
 	b.Credits = s.Credits
 	b.CargoMax = s.CargoMax
 	b.Cargo = s.Cargo
+	b.ShipName = s.ShipName
 }
 
 func (b *Bot) GetStatus() Status {
@@ -232,106 +235,53 @@ func (b *Bot) RefreshStatus(ctx context.Context) error {
 	if len(qr.StructuredContent) == 0 {
 		return nil
 	}
-	var st struct {
-		System   string  `json:"system"`
-		POI      string  `json:"poi"`
-		Docked   bool    `json:"docked"`
-		IsCloaked bool   `json:"isCloaked"`
-		InTransit bool   `json:"inTransit"`
-		TransitType string `json:"transitType"`
-		Fuel     float64 `json:"fuel"`
-		MaxFuel  float64 `json:"maxFuel"`
-		Hull     float64 `json:"hull"`
-		MaxHull  float64 `json:"maxHull"`
-		Shield   float64 `json:"shield"`
-		MaxShield float64 `json:"maxShield"`
-		Credits  float64                `json:"credits"`
-		CargoMax float64                `json:"cargoMax"`
-		Cargo    json.RawMessage      `json:"cargo"`
-	}
-	// Try top-level first (some endpoints flatten), then fall back to nested
-	// player.* / ship.* / location.* paths matching TS applyStatusResult().
-	if err := json.Unmarshal(qr.StructuredContent, &st); err != nil {
-		return err
-	}
-	// If top-level is empty, try nested paths
-	if st.Credits == 0 && st.Fuel == 0 && st.Hull == 0 {
-		var nested struct {
-			Player struct {
-				Credits float64 `json:"credits"`
-			} `json:"player"`
-			Ship struct {
-				Fuel    float64 `json:"fuel"`
-				MaxFuel float64 `json:"maxFuel"`
-				Hull    float64 `json:"hull"`
-				MaxHull float64 `json:"maxHull"`
-				Shield  float64 `json:"shield"`
-				MaxShield float64 `json:"maxShield"`
-				CargoCapacity float64 `json:"cargo_capacity"`
-			} `json:"ship"`
-			Location struct {
-				SystemID string `json:"system_id"`
-				POIID    string `json:"poi_id"`
-			} `json:"location"`
-		}
-		if err := json.Unmarshal(qr.StructuredContent, &nested); err == nil {
-			if st.Credits == 0 {
-				st.Credits = nested.Player.Credits
-			}
-			if st.Fuel == 0 {
-				st.Fuel = nested.Ship.Fuel
-			}
-			if st.MaxFuel == 0 {
-				st.MaxFuel = nested.Ship.MaxFuel
-			}
-			if st.Hull == 0 {
-				st.Hull = nested.Ship.Hull
-			}
-			if st.MaxHull == 0 {
-				st.MaxHull = nested.Ship.MaxHull
-			}
-			if st.Shield == 0 {
-				st.Shield = nested.Ship.Shield
-			}
-			if st.MaxShield == 0 {
-				st.MaxShield = nested.Ship.MaxShield
-			}
-			if st.CargoMax == 0 {
-				st.CargoMax = nested.Ship.CargoCapacity
-			}
-			if st.Shield == 0 {
-				st.Shield = nested.Ship.Shield
-			}
-			if st.MaxShield == 0 {
-				st.MaxShield = nested.Ship.MaxShield
-			}
-			if st.CargoMax == 0 {
-				st.CargoMax = nested.Ship.CargoCapacity
-			}
-			if st.System == "" {
-				st.System = nested.Location.SystemID
-			}
-			if st.POI == "" {
-				st.POI = nested.Location.POIID
-			}
-		}
-	}
-	totalCargo := float64(0)
+var st struct {
+    Player struct {
+        Credits float64 `json:"credits"`
+    } `json:"player"`
+    Ship struct {
+        Fuel     float64 `json:"fuel"`
+        MaxFuel  float64 `json:"max_fuel"`
+        Hull     float64 `json:"hull"`
+        MaxHull  float64 `json:"max_hull"`
+        Shield   float64 `json:"shield"`
+        MaxShield float64 `json:"max_shield"`
+        CargoUsed   float64 `json:"cargo_used"`
+        CargoCapacity float64 `json:"cargo_capacity"`
+        Name        string  `json:"name"`
+    } `json:"ship"`
+    Location struct {
+        SystemID string `json:"system_id"`
+        POIID    string `json:"poi_id"`
+    } `json:"location"`
+    Cargo []struct {
+        Quantity float64 `json:"quantity"`
+    } `json:"cargo"`
+}
+if err := json.Unmarshal(qr.StructuredContent, &st); err != nil {
+    return err
+}
+// Sum cargo quantities from the cargo array
+totalCargo := float64(0)
+for _, item := range st.Cargo {
+    totalCargo += item.Quantity
+}
 	b.SetStatus(Status{
-		System:   st.System,
-		POI:      st.POI,
-		Ship:     st.TransitType,
-		Credits:  st.Credits,
-		Fuel:     st.Fuel,
-		MaxFuel:  st.MaxFuel,
-		Hull:     st.Hull,
-		MaxHull:  st.MaxHull,
-		Shield:   st.Shield,
-		MaxShield: st.MaxShield,
-		Cargo:    float64(totalCargo),
-		CargoMax: st.CargoMax,
+		System:   st.Location.SystemID,
+		POI:      st.Location.POIID,
+		ShipName: st.Ship.Name,
+		Ship:     "",
+		Credits:  st.Player.Credits,
+		Fuel:     st.Ship.Fuel,
+		MaxFuel:  st.Ship.MaxFuel,
+		Hull:     st.Ship.Hull,
+		MaxHull:  st.Ship.MaxHull,
+		Shield:   st.Ship.Shield,
+		MaxShield: st.Ship.MaxShield,
+		Cargo:    totalCargo,
+		CargoMax: st.Ship.CargoCapacity,
 	})
-	return nil
+return nil
 }
 
 // RefreshLocation calls get_status and updates location fields only.

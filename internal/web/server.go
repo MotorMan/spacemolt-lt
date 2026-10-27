@@ -800,6 +800,7 @@ func botToObj(b *bot.Bot) map[string]interface{} {
 		"id":        b.ID,
 		"name":      b.Username,
 		"username":  b.Username,
+		"shipName":  b.ShipName,
 		"state":     string(b.State),
 		"routine":   b.Routine,
 		"system":    b.System,
