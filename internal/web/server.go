@@ -202,7 +202,7 @@ func (s *Server) dispatch(action wsMessage) map[string]interface{} {
 	case "init":
 		var settings map[string]interface{}
 		if s.Settings != nil {
-			_ = s.Settings.Read(&settings); log.Printf("init: read=%v", settings)
+			_ = s.Settings.Read(&settings)
 		}
 		if settings == nil {
 			settings = map[string]interface{}{}
@@ -544,8 +544,7 @@ func (s *Server) handleSettings(w http.ResponseWriter, r *http.Request) {
 	}
 	var settings map[string]interface{}
 	if s.Settings != nil {
-		_ = s.Settings.Read(&settings); log.Printf("init: read=%v", settings)
-		log.Printf("handleSettings: read=%v", settings)
+		_ = s.Settings.Read(&settings)
 	}
 	if settings == nil {
 		settings = map[string]interface{}{}
