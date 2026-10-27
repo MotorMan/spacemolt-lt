@@ -2502,6 +2502,11 @@
               settings = msg.settings || {};
               applyWindowTitle();
               window.currentSettings = settings; // Sync for use in render functions
+              // Initialize clerk selection from persisted settings so checkboxes
+              // stay ticked across reloads.
+              if (settings.clerk && Array.isArray(settings.clerk.bots)) {
+                for (const id of settings.clerk.bots) clerkSelection.add(id);
+              }
               knownSystems = msg.knownSystems || [];
               knownOres = msg.knownOres || [];
               mobileCapitol = msg.mobileCapitol || null;

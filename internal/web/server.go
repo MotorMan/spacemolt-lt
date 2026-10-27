@@ -16,6 +16,7 @@ import (
 	"github.com/gorilla/websocket"
 
 	"spacemolt-lt/embed"
+	"spacemolt-lt/internal/bot"
 	"spacemolt-lt/internal/botmanager"
 	"spacemolt-lt/internal/bridge"
 	"spacemolt-lt/internal/routines"
@@ -424,6 +425,40 @@ func (s *Server) dispatch(action wsMessage) map[string]interface{} {
 			// Maybe it's already an array
 			return map[string]interface{}{"ok": false, "error": "failed to parse groups: " + err.Error()}
 		}
+		// Mark players as selected if they're in clerk.bots (persisted selection),
+		// so the dashboard checkboxes stay ticked across reloads.
+		if s.Settings != nil {
+			var cur map[string]interface{}
+			_ = s.Settings.Read(&cur)
+			if cur != nil {
+				clerkObj, _ := cur["clerk"].(map[string]interface{})
+				var selectedBots []string
+				if botsRaw, ok := clerkObj["bots"].([]interface{}); ok {
+					for _, b := range botsRaw {
+						if s2, ok := b.(string); ok {
+							selectedBots = append(selectedBots, s2)
+						}
+					}
+				}
+				if len(selectedBots) > 0 {
+					selectedSet := make(map[string]bool, len(selectedBots))
+					for _, b := range selectedBots {
+						selectedSet[b] = true
+					}
+					for _, g := range groups {
+						if players, ok := g["players"].([]interface{}); ok {
+							for _, pRaw := range players {
+								if p, ok := pRaw.(map[string]interface{}); ok {
+									if username, ok := p["username"].(string); ok && selectedSet[username] {
+										p["selected"] = true
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
 		count := 0
 		for _, g := range groups {
 			if players, ok := g["players"].([]interface{}); ok {
@@ -432,7 +467,78 @@ func (s *Server) dispatch(action wsMessage) map[string]interface{} {
 		}
 		return map[string]interface{}{"ok": true, "data": map[string]interface{}{"groups": groups, "count": count}}
 	case "addClerkBots":
-		return map[string]interface{}{"ok": true, "added": 0}
+		if s.Bridge == nil {
+			return map[string]interface{}{"ok": false, "error": "no bridge"}
+		}
+		if s.Manager == nil {
+			return map[string]interface{}{"ok": false, "error": "no manager"}
+		}
+		idsRaw, _ := action.Data["ids"].([]interface{})
+		var ids []string
+		for _, idRaw := range idsRaw {
+			if id, ok := idRaw.(string); ok && id != "" {
+				ids = append(ids, id)
+			}
+		}
+		if len(ids) == 0 {
+			return map[string]interface{}{"ok": true, "added": 0, "ids": []interface{}{}}
+		}
+		res, err := s.Bridge.Call(context.Background(), "connectOwned", map[string]interface{}{"ids": ids})
+		if err != nil {
+			return map[string]interface{}{"ok": false, "error": err.Error()}
+		}
+		var connected []map[string]interface{}
+		if err := json.Unmarshal(res, &connected); err != nil {
+			return map[string]interface{}{"ok": false, "error": "failed to parse connected accounts: " + err.Error()}
+		}
+		var addedIds []string
+		for _, acc := range connected {
+			accID, _ := acc["id"].(string)
+			if accID == "" {
+				continue
+			}
+			if s.Manager.GetBotByAccount(accID) != nil {
+				continue
+			}
+			b := bot.New(accID, accID, accID, s.Bridge)
+			s.Manager.AddBot(b)
+			s.Manager.StartBot(context.Background(), b, 0)
+			addedIds = append(addedIds, accID)
+		}
+		// Persist newly-added bots to clerk.bots so they survive reloads and
+		// show as selected on the next listClerkPlayers.
+		if s.Settings != nil && len(addedIds) > 0 {
+			var cur map[string]interface{}
+			_ = s.Settings.Read(&cur)
+			if cur == nil {
+				cur = map[string]interface{}{}
+			}
+			clerkObj, _ := cur["clerk"].(map[string]interface{})
+			if clerkObj == nil {
+				clerkObj = map[string]interface{}{}
+			}
+			existing := make(map[string]bool)
+			if botsRaw, ok := clerkObj["bots"].([]interface{}); ok {
+				for _, b := range botsRaw {
+					if s2, ok := b.(string); ok {
+						existing[s2] = true
+					}
+				}
+			}
+			var bots []interface{}
+			for b := range existing {
+				bots = append(bots, b)
+			}
+			for _, id := range addedIds {
+				if !existing[id] {
+					bots = append(bots, id)
+				}
+			}
+			clerkObj["bots"] = bots
+			cur["clerk"] = clerkObj
+			_ = s.Settings.Write(cur)
+		}
+		return map[string]interface{}{"ok": true, "added": len(addedIds), "ids": addedIds}
 	case "bulkSetHunterMode":
 		return map[string]interface{}{"ok": true}
 	case "chat":
