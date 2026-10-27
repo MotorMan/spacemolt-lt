@@ -2689,6 +2689,11 @@
                   for (const id of msg.data.ids) clerkSelection.add(id);
                   renderClerkPlayers();
                 }
+                // Refresh the dashboard bot table so newly-added bots appear immediately.
+                fetch("/api/bots").then((r) => r.json()).then((d) => {
+                  bots = d.bots || [];
+                  renderBots();
+                }).catch(() => {});
                 // Refresh the player list so connected state is accurate.
                 listClerkPlayers();
               } else if (msg.action === "setClerkKey") {

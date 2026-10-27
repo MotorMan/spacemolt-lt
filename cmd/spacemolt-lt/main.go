@@ -93,9 +93,26 @@ func main() {
 	for i, b := range mgr.ListBots() {
 		mgr.StartBot(ctx, b, time.Duration(i)*2*time.Second)
 	}
+	// Restore bots from persisted clerk.bots so they survive client restarts.
 	settingsStore := store.New("data/settings.json")
 	var settings map[string]interface{}
 	_ = settingsStore.Read(&settings)
+	if settings != nil {
+		if clerkObj, ok := settings["clerk"].(map[string]interface{}); ok {
+			if botsRaw, ok := clerkObj["bots"].([]interface{}); ok {
+				for _, bRaw := range botsRaw {
+					id, _ := bRaw.(string)
+					if id == "" || mgr.GetBotByAccount(id) != nil {
+						continue
+					}
+					log.Printf("restoring clerk bot %s from settings", id)
+					b := bot.New(id, id, id, client)
+					mgr.AddBot(b)
+					mgr.StartBot(ctx, b, 0)
+				}
+			}
+		}
+	}
 
 	// Read sync settings and create sync client/master.
 	syncSettings := sync.DefaultSettings()

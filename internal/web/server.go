@@ -743,9 +743,28 @@ func (s *Server) handleBots(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "no manager", 500)
 		return
 	}
-	bots := s.Manager.ListBots()
+	botObjs := make([]map[string]interface{}, 0, len(s.Manager.ListBots()))
+	for _, b := range s.Manager.ListBots() {
+		botObjs = append(botObjs, map[string]interface{}{
+			"id":        b.ID,
+			"name":      b.Username,
+			"username":  b.Username,
+			"state":     string(b.State),
+			"routine":   b.Routine,
+			"system":    b.System,
+			"poi":       b.POI,
+			"location":  b.System + "/" + b.POI,
+			"credits":   b.Credits,
+			"fuel":      b.Fuel,
+			"maxFuel":   b.MaxFuel,
+			"hull":      b.Hull,
+			"maxHull":   b.MaxHull,
+			"isCloaked": b.IsCloaked,
+			"cargo":     b.Cargo,
+		})
+	}
 	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(map[string]interface{}{"bots": bots})
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{"bots": botObjs})
 }
 
 func (s *Server) handleBotsDiscovered(w http.ResponseWriter, r *http.Request) {
